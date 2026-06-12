@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>內湖國小輔助命題系統</title>
+<title>教師輔助命題系統｜Prompt-only 公開版</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700;900&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
@@ -612,7 +612,7 @@ textarea { resize: vertical; min-height: 130px; line-height: 1.7; }
   <header class="hdr">
     <div class="hdr-badge">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-      新竹市香山區內湖國小
+      個人維護｜Prompt-only 公開安全版
     </div>
     <h1>輔助命題系統</h1>
     <p class="hdr-sub">上傳教材 → AI 分析學習目標 → 智慧出題 → 老師審題把關</p>
@@ -1016,10 +1016,10 @@ textarea { resize: vertical; min-height: 130px; line-height: 1.7; }
 
   <footer class="ftr">
     <div class="ftr-line">出題結果僅供參考，請老師審題後使用</div>
-    <div id="copyrightLine">COPYRIGHT © 2026 HSINCHU NEI HU PRIMARY SCHOOL
-總務主任 江志宏
-smallcannon@nhps.hc.edu.tw｜03-5373184 #130
-系統：輔助命題系統｜最後維護：2026-05</div>
+    <div id="copyrightLine">江志宏｜國小總務主任
+聯繫方式：smallcannon@gmail.com
+本工具為個人維護之教師命題輔助工具，不代表任職學校或任何官方單位立場。
+系統：教師輔助命題系統｜Prompt-only 公開版</div>
     <div style="margin-top:8px;">
       <label style="font-size:11px;color:var(--text-3);cursor:pointer;user-select:none;">
         <input type="checkbox" id="wsToggle" onchange="toggleWorkshop()" style="vertical-align:middle;margin-right:4px;">
@@ -1081,16 +1081,16 @@ const S = {
   selTypes:[], selTypeIds:[], scores:[],
   outputMode:'exam',
   output:'', lastRunMeta:null,
-  workshopMode: safeGet('nhps_workshop','false')==='true',
+  workshopMode: safeGet('prompt_workshop','false')==='true',
   // 國語科專屬
   chFiles:{ text:[], word:[], sent:[], para:[] },
   chMat:{ text:'', word:'', sent:'', para:'' },
   chScores:{},
 };
 
-const COPYRIGHT_NOTICE = window.NHPS_PROMPTS&&typeof window.NHPS_PROMPTS.buildCopyrightNotice==='function'
-  ? window.NHPS_PROMPTS.buildCopyrightNotice()
-  : 'COPYRIGHT © 2026 HSINCHU NEI HU PRIMARY SCHOOL\n總務主任 江志宏\nsmallcannon@nhps.hc.edu.tw｜03-5373184 #130\n系統：輔助命題系統｜最後維護：2026-05';
+const COPYRIGHT_NOTICE = window.PROMPT_HELPERS&&typeof window.PROMPT_HELPERS.buildCopyrightNotice==='function'
+  ? window.PROMPT_HELPERS.buildCopyrightNotice()
+  : '江志宏｜國小總務主任\n聯繫方式：smallcannon@gmail.com\n本工具為個人維護之教師命題輔助工具，不代表任職學校或任何官方單位立場。\n系統：教師輔助命題系統｜Prompt-only 公開版';
 const copyrightEl = document.getElementById('copyrightLine');
 if (copyrightEl) copyrightEl.textContent = COPYRIGHT_NOTICE;
 
@@ -1441,7 +1441,7 @@ function updateModeUI(){
   if(resultGuide){
     resultGuide.innerHTML = promptOnly ? `
       <div class="result-step"><strong>1. 複製 Prompt</strong>公開安全版不直接呼叫 AI 後端；請將 Prompt 貼到 ChatGPT、Gemini 或 Claude 使用。</div>
-      <div class="result-step"><strong>2. 教師審查</strong>AI 產出內容須由教師審查、修正後使用，不代表學校官方題庫或正式學力檢測標準。</div>
+      <div class="result-step"><strong>2. 教師審查</strong>AI 產出內容須由教師審查、修正後使用，不代表任職學校或任何官方單位題庫，也不代表正式學力檢測標準。</div>
       <div class="result-step"><strong>3. 自行整理</strong>AI 回傳後再由教師自行挑題、修題、整理答案與學習目標。</div>
     ` : (bank ? `
       <div class="result-step"><strong>1. 先挑題</strong>從題庫中挑出適合班級程度與教材內容的題目。</div>
@@ -2100,7 +2100,7 @@ function buildPromptOnlyOutput(title,prompt,options={}){
 - 公開安全版不直接呼叫 AI 後端。
 - 本頁不內建後端網址，也不傳送密碼、金鑰或權杖。
 - ${note}
-- 本系統為個人維護之教師輔助工具，不代表學校官方題庫、官方採用或正式學力檢測標準。
+- 本系統為個人維護之教師輔助工具，不代表任職學校或任何官方單位題庫、官方採用或正式學力檢測標準。
 - AI 產出內容僅供教師備課與命題參考，正式使用前仍須由教師自行審查、修正與判斷。
 
 ## Prompt
@@ -2271,7 +2271,7 @@ function buildChineseExamPrompt(){
 3. 題數與配分必須合計 100 分；若微調題數或每題分數，必須在正式試題前用一行說明。
 
 【基本資訊】
-學校：內湖國小 ／ 科目：國語 ／ 年級：${S.grade}（${levelLabel}）／ 範圍：${S.scope}
+製卷資訊：教師自行審題使用 ／ 科目：國語 ／ 年級：${S.grade}（${levelLabel}）／ 範圍：${S.scope}
 難度：${d.label}（基礎 ${d.basic}%／中階 ${d.mid}%／進階 ${d.adv}%）
 
 【三向度配分規格】
@@ -2304,7 +2304,7 @@ ${matParts.join('\n\n')}
 【輸出格式】請嚴格依照以下結構輸出，不可遺漏分隔線：
 
 === 正式試題 ===
-內湖國小 ${rocYear} 學年度第___學期 定期評量 國語科試卷
+${rocYear} 學年度第___學期 定期評量 國語科試卷
 ${S.grade}___班 座號：_______ 姓名：_______
 
 （依字詞短語→句式語法→段篇讀寫順序出題）
@@ -2595,7 +2595,7 @@ function buildExamPrompt(targetScores,isMain,options={}){
   // 動態計算台灣學年度（8月為新學年度分界）
   const today = new Date();
   const rocYear = today.getFullYear() - 1911 - (today.getMonth() < 7 ? 1 : 0);
-  const fmt=isMain?`內湖國小 ${rocYear} 學年度第___學期 定期評量 ${S.subject}科試卷\n${S.grade}___班 座號：_______ 姓名：_______\n\n（依序輸出各大題）`:'（依序輸出分配給你的大題）';
+  const fmt=isMain?`${rocYear} 學年度第___學期 定期評量 ${S.subject}科試卷\n${S.grade}___班 座號：_______ 姓名：_______\n\n（依序輸出各大題）`:'（依序輸出分配給你的大題）';
   const outlineSection=includeOutline?`=== 知識萃取大綱 ===
 （最多 5 點，每點一行，只列本次命題必要概念）
 
@@ -2644,7 +2644,7 @@ function buildExamPrompt(targetScores,isMain,options={}){
 ${subjectRules[S.subject]||''}
 ${compactRule}
 
-【基本資訊】學校：內湖國小 ／ 科目：${S.subject} ／ 年級：${S.grade} ／ 範圍：${S.scope}
+【基本資訊】製卷資訊：教師自行審題使用 ／ 科目：${S.subject} ／ 年級：${S.grade} ／ 範圍：${S.scope}
 難度：${d.label}（基礎 ${d.basic}%／中階 ${d.mid}%／進階 ${d.adv}%）
 
 【你負責的題型配分清單】
@@ -3020,8 +3020,8 @@ function imagePromptSectionRe(){
 function normalizeImagePromptText(text){
   let clean=(text||'').replace(/```(?:text|markdown)?\s*/g,'').replace(/```\s*/g,'').trim();
   const re=imagePromptSectionRe();
-  const title=window.NHPS_PROMPTS&&window.NHPS_PROMPTS.IMAGE_SECTION_TITLE
-    ? window.NHPS_PROMPTS.IMAGE_SECTION_TITLE
+  const title=window.PROMPT_HELPERS&&window.PROMPT_HELPERS.IMAGE_SECTION_TITLE
+    ? window.PROMPT_HELPERS.IMAGE_SECTION_TITLE
     : '═══ ChatGPT 圖片生成指令 ═══';
   if(!re.test(clean)) clean=`${title}\n${clean}`;
   return clean;
@@ -3054,7 +3054,7 @@ async function generateImagePrompts(e){
     alert('公開安全版暫不提供一鍵圖片提示詞生成。請複製命題 Prompt 或 AI 回傳結果後，自行在 AI 工具中整理圖片提示詞。');
     return;
   }
-  if(!window.NHPS_PROMPTS||typeof window.NHPS_PROMPTS.buildChatGPTImagePromptRequest!=='function'){
+  if(!window.PROMPT_HELPERS||typeof window.PROMPT_HELPERS.buildChatGPTImagePromptRequest!=='function'){
     alert('出圖 prompt 模組尚未載入，請重新整理頁面後再試。');
     return;
   }
@@ -3063,7 +3063,7 @@ async function generateImagePrompts(e){
   if(btn){ btn.disabled=true; btn.textContent='正在產生出圖指令...'; }
   const startedAt=Date.now();
   try{
-    const prompt=window.NHPS_PROMPTS.buildChatGPTImagePromptRequest({
+    const prompt=window.PROMPT_HELPERS.buildChatGPTImagePromptRequest({
       subject:S.subject,
       grade:S.grade,
       scope:S.scope,
@@ -3227,7 +3227,7 @@ function downloadReview(){ if(S.subject==='國語') downloadChineseReview(); els
 
 function downloadGenericReview(){
   const objs=S.objectives.filter(o=>o.checked);
-  const headerRows=[['新竹市香山區內湖國小'],['學年度第___學期 第___次學習評量 試題審核表'],[],['年級／領域',S.grade+'／'+S.subject,'','命題教師',''],['評量範圍',S.scope,'','版本',''],[], ['大單元名稱','授課節數','出題佔分','佔比(%)','教學目標/學習目標']];
+  const headerRows=[['教師輔助命題系統'],['學年度第___學期 第___次學習評量 試題審核表'],[],['年級／領域',S.grade+'／'+S.subject,'','命題教師',''],['評量範圍',S.scope,'','版本',''],[], ['大單元名稱','授課節數','出題佔分','佔比(%)','教學目標/學習目標']];
   const objRows=objs.map(o=>[o.source&&o.source!=='老師輸入'?o.source:S.scope,o.hours||'',o.weight+' 分',o.weight+'%',o.name]);
   const typeRows=[[],['題型配分明細'],['大題','題型','題數','每題分數','小計']];
   const ord=['一','二','三','四','五','六','七','八','九','十'];
@@ -3247,7 +3247,7 @@ function downloadChineseReview(){
   const mm=S.output.match(/═══ 國語科雙向細目表對應 ═══[\s\S]*?```json\n([\s\S]*?)\n```/);
   if(mm&&mm[1]){ try{ matrixScores=JSON.parse(mm[1]); }catch(e){} }
 const topRows=[
-    [`新竹市內湖國小 ${S.grade} 國語科試題審核表`],
+    [`教師輔助命題系統 ${S.grade} 國語科試題審核表`],
     ['參照許育健教授國語科評量向度佔分比例建議擬定(114.05)'],
     [],['評量範圍：',S.scope,'','命題教師：','','',''],
     [],
@@ -3332,7 +3332,7 @@ const objRows=[];
 // ═══════════════════════════════════════
 function toggleWorkshop(){
   const on=document.getElementById('wsToggle').checked;
-  S.workshopMode=on; safeSet('nhps_workshop',on?'true':'false');
+  S.workshopMode=on; safeSet('prompt_workshop',on?'true':'false');
 }
 
 // ═══════════════════════════════════════
