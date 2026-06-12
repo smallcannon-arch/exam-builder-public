@@ -1,0 +1,3349 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>內湖國小輔助命題系統</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700;900&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+<script src="src/prompts.js"></script>
+<style>
+:root {
+  --bg: #EEF8FC;
+  --surface: #FFFFFF;
+  --surface-alt: #F7FCFF;
+  --surface-hover: #EAF6FB;
+  --border: #D2E5EE;
+  --border-light: #E3F0F6;
+  --border-focus: #6BB6D4;
+  --text: #1D2D36;
+  --text-2: #536C78;
+  --text-3: #8AA5B1;
+  --accent: #55A9CC;
+  --accent-h: #327EA3;
+  --accent-l: #DDF3FB;
+  --accent-bg: #F0FAFE;
+  --gold: #B6934C;
+  --gold-l: #FFF4D9;
+  --warn: #C18A3C;
+  --warn-bg: #FFF6E8;
+  --err: #B85B65;
+  --err-bg: #FFF0F2;
+  --sh-1: 0 1px 3px rgba(41,96,120,0.07);
+  --sh-2: 0 4px 16px rgba(41,96,120,0.10);
+  --sh-3: 0 8px 30px rgba(41,96,120,0.14);
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --t: 0.2s ease;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Noto Sans TC', -apple-system, sans-serif;
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 15% 85%, rgba(85,169,204,0.11) 0%, transparent 52%),
+    radial-gradient(ellipse at 85% 15%, rgba(255,204,153,0.12) 0%, transparent 48%);
+  background-attachment: fixed;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.75;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { width: 92%; max-width: 1400px; margin: 0 auto; padding: 16px 20px 48px; position: relative; }
+@media (min-width: 640px) { .wrap { padding: 24px 32px 56px; } }
+.hdr { text-align: center; padding: 28px 0 20px; }
+.hdr-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--accent-l); color: var(--accent);
+  font-size: 14px; font-weight: 600; padding: 5px 14px;
+  border-radius: 20px; margin-bottom: 14px; letter-spacing: 1px;
+}
+.hdr h1 {
+  font-family: 'Noto Serif TC', serif;
+  font-size: 28px;
+  font-weight: 900; letter-spacing: 2px;
+  background: linear-gradient(135deg, var(--text) 0%, #4C9FC0 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; margin-bottom: 6px;
+}
+@media (min-width: 640px) { .hdr h1 { font-size: 38px; } }
+.hdr-sub { font-size: 13px; color: var(--text-3); font-weight: 400; letter-spacing: 0.5px; }
+.steps { display: flex; justify-content: center; align-items: center; gap: 0; margin: 4px 0 24px; }
+.stp {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 13px; color: var(--text-3); font-weight: 500; transition: color var(--t);
+}
+.stp.on { color: var(--accent); font-weight: 700; }
+.stp.ok { color: var(--accent); }
+.stp-n {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+  background: var(--border); color: var(--text-3);
+  transition: all var(--t); flex-shrink: 0;
+}
+.stp.on .stp-n { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(85,169,204,0.34); }
+.stp.ok .stp-n { background: var(--accent-l); color: var(--accent); }
+.stp-c {
+  width: 20px; height: 2px; background: var(--border-light);
+  margin: 0 6px; flex-shrink: 0; border-radius: 1px;
+  transition: background var(--t);
+}
+.stp-c.ok { background: var(--accent-l); }
+.stp-t { display: none; }
+@media (min-width: 540px) { .stp-t { display: inline; } }
+.pnl {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  padding: 24px;
+  margin-bottom: 14px;
+  box-shadow: var(--sh-1);
+  animation: slideUp 0.35s ease;
+}
+@media (min-width: 640px) { .pnl { padding: 32px; } }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.pnl-t {
+  font-size: 18px; font-weight: 700; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px; color: var(--text);
+}
+.pnl-t svg { width: 22px; height: 22px; color: var(--accent); flex-shrink: 0; }
+.pnl-desc { font-size: 16px; color: var(--text-2); margin-bottom: 16px; line-height: 1.7; }
+.step-guide {
+  background: linear-gradient(135deg, var(--accent-bg), #fff);
+  border: 1px solid var(--border-light);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--r-sm);
+  padding: 12px 14px;
+  margin: -4px 0 16px;
+}
+.guide-label {
+  color: var(--accent-h);
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+.guide-title {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 800;
+}
+.guide-text {
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-top: 2px;
+}
+.guide-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.guide-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 9px;
+}
+.guide-chip.done {
+  background: var(--accent-l);
+  border-color: var(--accent-l);
+  color: var(--accent-h);
+}
+.guide-chip.warn {
+  background: var(--warn-bg);
+  border-color: var(--gold-l);
+  color: var(--warn);
+}
+.mode-seg {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+.mode-option {
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  border-radius: var(--r-sm);
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all var(--t);
+}
+.mode-option:hover { border-color: var(--accent); background: var(--accent-bg); }
+.mode-option.on {
+  border-color: var(--accent);
+  background: var(--accent-l);
+  color: var(--accent-h);
+}
+.mode-option:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: var(--surface-hover);
+}
+.mode-option strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 2px;
+}
+.mode-option span {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.next-note {
+  color: var(--text-3);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.next-note.ok { color: var(--accent-h); font-weight: 700; }
+.next-note.warn { color: var(--warn); font-weight: 700; }
+.result-guide {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 14px;
+}
+.result-step {
+  background: var(--accent-bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.result-step strong {
+  display: block;
+  color: var(--accent-h);
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+@media (max-width: 760px) { .result-guide { grid-template-columns: 1fr; } }
+.fg { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 520px) { .fg { grid-template-columns: 1fr; } }
+.fg-full { grid-column: 1 / -1; }
+.fl { font-size: 15px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; display: block; letter-spacing: 0.3px; }
+.fl .req { color: var(--err); margin-left: 2px; }
+.fl .opt { color: var(--text-3); font-size: 12px; font-weight: 700; margin-left: 6px; }
+select, input[type="text"], input[type="number"], textarea {
+  width: 100%; padding: 12px 16px; font-size: 17px;
+  border: 1.5px solid var(--border); border-radius: var(--r-sm);
+  font-family: inherit; color: var(--text);
+  background: var(--surface); transition: all var(--t); outline: none;
+}
+select:focus, input:focus, textarea:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(85,169,204,0.18);
+}
+select {
+  cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%235C5750' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center; padding-right: 30px;
+}
+textarea { resize: vertical; min-height: 130px; line-height: 1.7; }
+/* ═══ Upload Zone ═══ */
+.upz {
+  border: 2px dashed var(--border); border-radius: var(--r-md);
+  padding: 32px 20px; text-align: center; cursor: pointer;
+  transition: all var(--t); position: relative; background: var(--surface-alt);
+}
+.upz:hover, .upz.drag { border-color: var(--accent); background: var(--accent-bg); }
+.upz input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.upz-icon { color: var(--text-3); margin-bottom: 6px; }
+.upz-icon svg { width: 28px; height: 28px; }
+.upz-main { font-size: 14px; font-weight: 500; color: var(--text-2); }
+.upz-hint { font-size: 13px; color: var(--text-3); margin-top: 4px; line-height: 1.5; }
+/* 國語科小型上傳區 */
+.ch-upz {
+  border: 2px dashed var(--border); border-radius: var(--r-md);
+  padding: 16px 14px; text-align: center; cursor: pointer;
+  transition: all var(--t); position: relative; background: var(--surface-alt);
+  margin-top: 8px;
+}
+.ch-upz:hover, .ch-upz.drag { border-color: var(--accent); background: var(--accent-bg); }
+.ch-upz input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.ch-upz-main { font-size: 15px; font-weight: 500; color: var(--text-2); display: flex; align-items: center; justify-content: center; gap: 6px; }
+.ch-upz-hint { font-size: 13px; color: var(--text-3); margin-top: 3px; }
+.ch-upz-st { font-size: 14px; color: var(--accent); margin-top: 6px; font-weight: 500; min-height: 18px; }
+.flist { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.fitem {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; background: var(--surface-alt);
+  border-radius: var(--r-sm); font-size: 15px;
+  border: 1px solid var(--border-light);
+}
+.fitem-icon { color: var(--accent); flex-shrink: 0; }
+.fitem-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.fitem-info { color: var(--text-3); font-size: 13px; flex-shrink: 0; }
+.fitem-rm {
+  background: none; border: none; cursor: pointer; color: var(--text-3);
+  padding: 2px; border-radius: 4px; transition: color var(--t); flex-shrink: 0;
+}
+.fitem-rm:hover { color: var(--err); }
+.mtabs { display: flex; gap: 0; margin-bottom: 12px; border-bottom: 2px solid var(--border-light); }
+.mtab {
+  padding: 8px 16px; font-size: 15px; font-weight: 500;
+  color: var(--text-3); cursor: pointer; border: none;
+  background: none; font-family: inherit;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  transition: all var(--t);
+}
+.mtab:hover { color: var(--text-2); }
+.mtab.on { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
+.mtc { display: none; }
+.mtc.on { display: block; }
+.mat-st {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: var(--r-sm);
+  font-size: 14px; font-weight: 500; margin-top: 10px;
+}
+.mat-st.ok { background: var(--accent-bg); color: var(--accent); }
+.mat-st.no { background: var(--warn-bg); color: var(--warn); }
+/* ═══ Chinese Material Zones ═══ */
+.ch-zones { display: flex; flex-direction: column; gap: 14px; }
+.ch-zone {
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  background: var(--surface-alt);
+}
+.ch-zone-hd {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 700; color: var(--text);
+  margin-bottom: 4px;
+}
+.ch-zone-badge {
+  font-size: 12px; font-weight: 700; padding: 2px 8px;
+  border-radius: 10px; flex-shrink: 0;
+}
+.ch-zone-badge.z1 { background: #e0f2fe; color: #1e40af; }
+.ch-zone-badge.z2 { background: #fef3c7; color: #92400e; }
+.ch-zone-badge.z3 { background: #f0fdf4; color: #166534; }
+.ch-zone-badge.z4 { background: #fdf4ff; color: #7e22ce; }
+.ch-zone-hint { font-size: 13px; color: var(--text-3); margin-bottom: 6px; }
+/* ═══ Objectives ═══ */
+.obj-card {
+  border: 1.5px solid var(--border); border-radius: var(--r-md);
+  padding: 14px 16px; margin-bottom: 10px;
+  transition: all var(--t); background: var(--surface);
+}
+.obj-card:hover { border-color: var(--accent); }
+.obj-card.unchecked { opacity: 0.5; }
+.obj-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.obj-chk {
+  width: 20px; height: 20px; border: 2px solid var(--border);
+  border-radius: 4px; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; cursor: pointer; transition: all var(--t);
+}
+.obj-chk.on { background: var(--accent); border-color: var(--accent); }
+.obj-chk svg { width: 12px; height: 12px; color: #fff; opacity: 0; transition: opacity var(--t); }
+.obj-chk.on svg { opacity: 1; }
+.obj-name { flex: 1; font-size: 14px; font-weight: 600; }
+.obj-weight { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.obj-weight input { width: 50px; padding: 4px 6px; text-align: center; font-size: 15px; border-radius: 4px; }
+.obj-detail { font-size: 15px; color: var(--text-2); line-height: 1.6; padding-left: 30px; }
+.obj-summary {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 0 0; margin-top: 8px; border-top: 1px solid var(--border-light);
+  font-size: 15px;
+}
+.obj-total { font-weight: 700; color: var(--accent); }
+.obj-total.err { color: var(--err); }
+/* ═══ Question Types ═══ */
+.qtg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 520px) { .qtg { grid-template-columns: 1fr; } }
+.qti {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 14px; border: 1.5px solid var(--border);
+  border-radius: var(--r-md); cursor: pointer;
+  transition: all var(--t); user-select: none;
+}
+.qti:hover { border-color: var(--accent); background: var(--accent-bg); }
+.qti.on { border-color: var(--accent); background: var(--accent-l); }
+.qti input { display: none; }
+.qti-c {
+  width: 20px; height: 20px; border: 2px solid var(--border);
+  border-radius: 4px; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px; transition: all var(--t);
+}
+.qti.on .qti-c { background: var(--accent); border-color: var(--accent); }
+.qti-c svg { width: 12px; height: 12px; color: #fff; opacity: 0; transition: opacity var(--t); }
+.qti.on .qti-c svg { opacity: 1; }
+.qti-info { flex: 1; }
+.qti-name { font-size: 15px; font-weight: 600; line-height: 1.3; }
+.qti-desc { font-size: 13px; color: var(--text-3); margin-top: 2px; }
+.qti-badge {
+  display: inline-block; background: var(--gold-l); color: var(--gold);
+  font-size: 12px; font-weight: 700; padding: 1px 6px;
+  border-radius: 3px; margin-left: 4px; vertical-align: middle;
+}
+/* ═══ Score Table ═══ */
+.stbl { width: 100%; border-collapse: collapse; margin-top: 6px; }
+.stbl th, .stbl td { padding: 10px 10px; text-align: left; font-size: 15px; border-bottom: 1px solid var(--border-light); }
+.stbl th { font-weight: 600; color: var(--text-3); font-size: 13px; letter-spacing: 0.5px; }
+.stbl input[type="number"] { width: 56px; padding: 5px 6px; text-align: center; font-size: 15px; }
+.stbl-total { font-size: 16px; font-weight: 900; color: var(--accent); text-align: right; padding-top: 12px; }
+.stbl-total.err { color: var(--err); }
+.sc-ord { display: flex; flex-direction: column; gap: 2px; }
+.sc-ord button { background: none; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; padding: 1px 4px; font-size: 14px; color: var(--text-2); line-height: 1; transition: all var(--t); }
+.sc-ord button:hover { background: var(--accent-l); border-color: var(--accent); color: var(--accent); }
+.sc-ord button:disabled { opacity: 0.2; cursor: default; }
+/* ═══ Buttons ═══ */
+.brow { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 24px; font-size: 16px;
+  border: none; border-radius: var(--r-sm);
+  font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: all var(--t); letter-spacing: 0.3px;
+}
+.btn-p {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-h) 100%);
+  color: #fff; box-shadow: var(--sh-1);
+}
+.btn-p:hover { box-shadow: var(--sh-2); transform: translateY(-1px); }
+.btn-p:active { transform: translateY(0); }
+.btn-p:disabled { background: var(--border); cursor: not-allowed; box-shadow: none; transform: none; }
+.btn-s { background: var(--surface); color: var(--text-2); border: 1.5px solid var(--border); }
+.btn-s:hover { background: var(--surface-hover); }
+.btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+/* ═══ Output ═══ */
+.out-area {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 24px; margin-top: 14px;
+  animation: slideUp 0.35s ease;
+}
+@media (min-width: 640px) { .out-area { padding: 32px; } }
+.out-txt {
+  font-size: 14px; line-height: 1.85;
+  font-family: 'Noto Sans TC', sans-serif;
+  max-height: 600px; overflow-y: auto; padding-right: 8px;
+}
+.out-txt pre { white-space: pre-wrap; font-family: inherit; }
+.out-txt table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 14px; }
+.out-txt th, .out-txt td { border: 1px solid var(--border); padding: 7px 10px; text-align: left; }
+.out-txt th { background: var(--surface-alt); font-weight: 600; color: var(--text-2); }
+.out-txt tr:nth-child(even) td { background: var(--surface-alt); }
+.out-txt p { margin: 6px 0; white-space: pre-wrap; }
+.out-txt h1,.out-txt h2,.out-txt h3 { margin: 12px 0 6px; }
+.out-txt ul, .out-txt ol { padding-left: 24px; margin: 8px 0; }
+.out-txt li { margin-bottom: 4px; }
+.out-txt::-webkit-scrollbar { width: 5px; }
+.out-txt::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.run-meta {
+  border: 1px solid var(--border-light);
+  border-radius: var(--r-md);
+  background: var(--surface-alt);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.run-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+.run-meta-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+.run-meta-k { color: var(--text-3); flex-shrink: 0; }
+.run-meta-v { font-weight: 700; color: var(--text); text-align: right; overflow-wrap: anywhere; }
+.run-meta-calls {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.run-meta-call {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.run-meta-warn {
+  margin-top: 10px;
+  color: var(--warn);
+  background: var(--warn-bg);
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  line-height: 1.5;
+}
+.out-acts {
+  display: flex; gap: 8px; margin-top: 16px;
+  padding-top: 16px; border-top: 1px solid var(--border-light); flex-wrap: wrap;
+}
+/* ═══ Loading ═══ */
+.ld-wrap { text-align: center; padding: 48px 20px; }
+.ld-spin {
+  width: 32px; height: 32px; border: 3px solid var(--border);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 0.7s linear infinite; margin: 0 auto 14px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.ld-msg { font-size: 20px; color: var(--accent); font-weight: 700; }
+.ld-sub { font-size: 14px; color: var(--text-3); margin-top: 8px; }
+/* ═══ [修改4] 計時器樣式 ═══ */
+.ld-timer { font-size: 15px; color: var(--text-3); margin-top: 6px; }
+/* ═══ Status Msg ═══ */
+.smsg {
+  padding: 10px 14px; border-radius: var(--r-sm);
+  font-size: 14px; font-weight: 500; margin-top: 10px;
+  display: flex; align-items: flex-start; gap: 8px; line-height: 1.5;
+}
+.smsg svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; }
+.smsg.err { background: var(--err-bg); color: var(--err); }
+.smsg.warn { background: var(--warn-bg); color: var(--warn); }
+.smsg.info { background: var(--accent-bg); color: var(--accent); }
+/* ═══ Modal ═══ */
+.modal-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; padding: 20px; animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } }
+.modal {
+  background: var(--surface); border-radius: var(--r-lg);
+  padding: 28px; max-width: 420px; width: 100%;
+  box-shadow: var(--sh-3); animation: scaleIn 0.25s ease;
+}
+@keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } }
+.modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
+.modal p { font-size: 15px; color: var(--text-2); margin-bottom: 14px; line-height: 1.6; }
+.modal a { color: var(--accent); text-decoration: underline; }
+.modal input { margin-bottom: 14px; }
+.copy-modal { max-width: 780px; }
+.copy-text {
+  width: 100%;
+  min-height: 260px;
+  max-height: 50vh;
+  margin: 8px 0 14px;
+  font-size: 14px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+/* ═══ Chinese Step2 向度設定 ═══ */
+.ch-score-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 0; border-bottom: 1px solid var(--border-light);
+  flex-wrap: nowrap; min-width: 0;
+}
+.ch-score-label {
+  flex: 1; font-size: 15px; min-width: 0;
+  display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+}
+.ch-score-item:last-child { border-bottom: none; }
+.ch-score-label { flex: 1; font-size: 15px; }
+.ch-score-ex { font-size: 13px; color: var(--text-3); margin-left: 4px; }
+.ch-score-input {
+  width: 56px; padding: 4px 6px; text-align: center;
+  font-size: 15px; border: 1.5px solid var(--border);
+  border-radius: 4px; font-family: inherit;
+}
+.ch-score-input:focus { border-color: var(--border-focus); outline: none; }
+.ch-zone-section {
+  border: 1.5px solid var(--border); border-radius: var(--r-md);
+  margin-bottom: 12px; overflow: visible;
+}
+.ch-zone-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; background: var(--surface-alt);
+  border-bottom: 1px solid var(--border-light);
+}
+.ch-zone-body { padding: 8px 16px; width: 100%; box-sizing: border-box; }
+.ch-expand-btn {
+  background: none; border: none; color: var(--accent);
+  font-size: 14px; cursor: pointer; padding: 6px 0;
+  font-family: inherit; display: flex; align-items: center; gap: 4px;
+}
+.rec-badge {
+  display: inline-block; background: var(--gold-l); color: var(--gold);
+  font-size: 12px; font-weight: 700; padding: 1px 6px;
+  border-radius: 3px; margin-left: 6px;
+}
+/* ═══ [修改1] 向度小計標籤樣式 ═══ */
+.ch-zone-sub {
+  font-size: 14px; font-weight: 700; padding: 2px 8px;
+  border-radius: 4px; background: var(--border-light);
+  color: var(--text-3); min-width: 48px; text-align: center;
+  transition: color var(--t);
+}
+/* ═══ Footer ═══ */
+.ftr {
+  text-align: center; padding: 28px 0 8px;
+  font-size: 13px; color: var(--text-3); letter-spacing: 0.3px;
+}
+.ftr-line { margin-bottom: 4px; }
+#copyrightLine { white-space: pre-line; line-height: 1.8; }
+/* ═══ Utility ═══ */
+.hide { display: none !important; }
+.sep { height: 1px; background: var(--border-light); margin: 18px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hdr">
+    <div class="hdr-badge">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      新竹市香山區內湖國小
+    </div>
+    <h1>輔助命題系統</h1>
+    <p class="hdr-sub">上傳教材 → AI 分析學習目標 → 智慧出題 → 老師審題把關</p>
+  </header>
+
+  <div class="steps">
+    <div class="stp on" data-s="1"><span class="stp-n">1</span><span class="stp-t">教材</span></div>
+    <div class="stp-c"></div>
+    <div class="stp" data-s="2"><span class="stp-n">2</span><span class="stp-t">目標</span></div>
+    <div class="stp-c"></div>
+    <div class="stp" data-s="3"><span class="stp-n">3</span><span class="stp-t">題型</span></div>
+    <div class="stp-c"></div>
+    <div class="stp" data-s="4"><span class="stp-n">4</span><span class="stp-t">配分</span></div>
+    <div class="stp-c"></div>
+    <div class="stp" data-s="5"><span class="stp-n">5</span><span class="stp-t">出題</span></div>
+  </div>
+
+  <!-- ═══ STEP 1 ═══ -->
+  <div id="s1" class="pnl">
+    <div class="pnl-t">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4m0 14v4m-8.66-2.34 2.83-2.83m11.66-5.66 2.83-2.83M1 12h4m14 0h4M4.34 4.34l2.83 2.83m11.66 5.66 2.83 2.83"/></svg>
+      建立任務與提供教材
+    </div>
+    <div class="step-guide">
+      <div class="guide-label">目前要做</div>
+      <div class="guide-title" id="s1GuideTitle">先選科目與年級，再提供教材</div>
+      <div class="guide-text" id="s1GuideText">教材是主要出題依據；範圍與難度可以先不改。若還不想直接排成考卷，建議先選「產出題庫」。</div>
+      <div class="guide-checks">
+        <span class="guide-chip warn" id="guideSubjectChip">1. 選科目</span>
+        <span class="guide-chip warn" id="guideGradeChip">2. 選年級</span>
+        <span class="guide-chip done" id="guideModeChip">3. 正式考卷</span>
+        <span class="guide-chip done" id="guideOptionChip">4. 選填設定可不改</span>
+        <span class="guide-chip warn" id="guideMaterialChip">5. 教材內容</span>
+        <span class="guide-chip warn" id="guideNextChip">6. 下一步</span>
+      </div>
+    </div>
+    <div class="fg">
+      <div>
+        <label class="fl">科目 <span class="req">*</span></label>
+        <select id="subject">
+          <option value="">請選擇</option>
+          <option value="國語">國語</option>
+          <option value="數學">數學</option>
+          <option value="自然">自然</option>
+          <option value="社會">社會</option>
+          <option value="英語">英語</option>
+        </select>
+      </div>
+      <div>
+        <label class="fl">年級 <span class="req">*</span></label>
+        <select id="grade">
+          <option value="">請選擇</option>
+          <option>一年級</option><option>二年級</option><option>三年級</option>
+          <option>四年級</option><option>五年級</option><option>六年級</option>
+        </select>
+      </div>
+      <div class="fg-full">
+        <label class="fl">這次要產出什麼？</label>
+        <div class="mode-seg">
+          <button type="button" class="mode-option on" id="modeExam" onclick="setOutputMode('exam')">
+            <strong>正式考卷</strong>
+            <span>直接產生可排版列印的試卷、答案卷與審核表。</span>
+          </button>
+          <button type="button" class="mode-option" id="modeBank" onclick="setOutputMode('bank')">
+            <strong>產出題庫</strong>
+            <span>先產生可挑選題目，老師挑題後再自行組卷。</span>
+          </button>
+          <button type="button" class="mode-option" id="modeCompetency" onclick="setOutputMode('competency_assessment')">
+            <strong>學力檢測（能力導向）模式</strong>
+            <span>參考學力檢測常見題型精神，產生閱讀理解、情境應用、資料判讀、圖表推論與多步驟思考題。AI 產出內容仍須由教師審查、修正後使用。</span>
+          </button>
+        </div>
+      </div>
+      <div>
+        <label class="fl">難度配置 <span class="opt">可不改</span></label>
+        <select id="difficulty">
+          <option value="balanced">均衡混合（建議）</option>
+          <option value="easy">基礎為主</option>
+          <option value="hard">偏難挑戰</option>
+        </select>
+      </div>
+      <div>
+        <label class="fl">範圍 / 備註 <span class="opt">選填</span></label>
+        <input type="text" id="scope" placeholder="選填：第一單元、期中考範圍、版本或頁碼...">
+      </div>
+    </div>
+
+    <div class="sep"></div>
+
+    <div class="pnl-t">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      上傳教材 <span class="req" style="font-size:13px">*</span>
+    </div>
+
+    <div id="matTip" class="smsg info hide" style="margin-bottom:12px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <span id="matTipTx"></span>
+    </div>
+
+    <!-- 一般科目上傳區 -->
+    <div id="normalMatArea">
+      <p id="mat-desc" class="pnl-desc" style="margin-bottom:12px;">請提供本次要出題的教材。AI 會以教材內容為準；若範圍欄留空，系統會視為「依上傳教材」。</p>
+      <div class="mtabs">
+        <button class="mtab on" onclick="swTab('up')">上傳檔案</button>
+        <button class="mtab" onclick="swTab('tx')">貼上文字</button>
+      </div>
+      <div id="tab-up" class="mtc on">
+        <div class="upz" id="upzone">
+          <input type="file" id="fileIn" multiple accept=".docx,.pdf">
+          <div class="upz-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <div class="upz-main">點擊或拖曳 .docx / .pdf 檔案到這裡</div>
+          <div class="upz-hint">支援 .docx 與 .pdf 格式 ・ 可上傳多個檔案<br>⚠️ 掃描式 PDF（純圖片）無法擷取文字，請改用文字貼上</div>
+        </div>
+        <div class="flist" id="flist"></div>
+      </div>
+      <div id="tab-tx" class="mtc">
+        <textarea id="matTxt" placeholder="直接貼上課文、講義、筆記等文字內容..."></textarea>
+      </div>
+      <!-- 學習目標（一般科目用） -->
+      <div id="objInputArea" style="margin-top:18px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-h)" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <strong style="color:var(--accent-h);">學習目標（進階選填）</strong>
+          <span style="font-size:12px;color:var(--text-3);">不知道可留空，系統會從教材分析</span>
+        </div>
+        <div style="margin-bottom:10px;padding:10px 14px;background:var(--accent-bg);border-radius:8px;border-left:4px solid var(--accent);">
+          <a href="https://gemini.google.com/gem/1Xd6a-3N4dZvvzC7TdgP1yBjAa2IXDUFb?usp=sharing" target="_blank" rel="noopener noreferrer" style="text-decoration:none;color:var(--accent);font-weight:bold;font-size:14px;display:flex;align-items:center;gap:6px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+            啟動 AI 學習目標擷取器
+            <span style="color:var(--text-2);font-size:12px;font-weight:normal;margin-left:4px;">(上傳教案電子檔，自動轉為含單元名稱的貼上格式)</span>
+          </a>
+        </div>
+        <textarea id="objInput" rows="5" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;line-height:1.7;resize:vertical;font-family:inherit;" placeholder="將 Gems 擷取器的結果直接貼在這裡（包含【單元名稱】與【節數】）。&#10;&#10;💡 若留空，系統將自動從下方教材中幫您歸納。"></textarea>
+      </div>
+    </div>
+
+    <!-- 國語科素材分區上傳 -->
+    <div id="chineseMatArea" class="hide">
+      <div class="ch-zones">
+        <div class="ch-zone">
+          <div class="ch-zone-hd">
+            <span class="ch-zone-badge z1">課文</span>
+            課文文本
+          </div>
+          <div class="ch-zone-hint">拖曳或點擊上傳本次出題範圍的課文（.docx / .pdf）</div>
+          <div class="ch-upz" id="ch-upz-text">
+            <input type="file" id="ch-file-text" multiple accept=".docx,.pdf">
+            <div class="ch-upz-main">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              點擊或拖曳檔案到這裡
+            </div>
+            <div class="ch-upz-hint">支援 .docx / .pdf，可多選</div>
+            <div class="ch-upz-st" id="ch-st-text"></div>
+          </div>
+        </div>
+        <div class="ch-zone">
+          <div class="ch-zone-hd">
+            <span class="ch-zone-badge z2">字詞短語</span>
+            形音 ／ 字義 ／ 成語
+          </div>
+          <div class="ch-zone-hint">拖曳或點擊上傳形音、字義、成語等素材（.docx / .pdf）</div>
+          <div class="ch-upz" id="ch-upz-word">
+            <input type="file" id="ch-file-word" multiple accept=".docx,.pdf">
+            <div class="ch-upz-main">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              點擊或拖曳檔案到這裡
+            </div>
+            <div class="ch-upz-hint">支援 .docx / .pdf，可多選</div>
+            <div class="ch-upz-st" id="ch-st-word"></div>
+          </div>
+        </div>
+        <div class="ch-zone">
+          <div class="ch-zone-hd">
+            <span class="ch-zone-badge z3">句式語法</span>
+            句型 ／ 修辭 ／ 修辭總表
+          </div>
+          <div class="ch-zone-hint">拖曳或點擊上傳句型、修辭等素材（.docx / .pdf）</div>
+          <div class="ch-upz" id="ch-upz-sent">
+            <input type="file" id="ch-file-sent" multiple accept=".docx,.pdf">
+            <div class="ch-upz-main">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              點擊或拖曳檔案到這裡
+            </div>
+            <div class="ch-upz-hint">支援 .docx / .pdf，可多選</div>
+            <div class="ch-upz-st" id="ch-st-sent"></div>
+          </div>
+        </div>
+        <div class="ch-zone">
+          <div class="ch-zone-hd">
+            <span class="ch-zone-badge z4">段篇讀寫</span>
+            大意 ／ 結構表 ／ 閱讀理解
+          </div>
+          <div class="ch-zone-hint">拖曳或點擊上傳大意、結構表、閱讀理解等素材（.docx / .pdf）</div>
+          <div class="ch-upz" id="ch-upz-para">
+            <input type="file" id="ch-file-para" multiple accept=".docx,.pdf">
+            <div class="ch-upz-main">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              點擊或拖曳檔案到這裡
+            </div>
+            <div class="ch-upz-hint">支援 .docx / .pdf，可多選</div>
+            <div class="ch-upz-st" id="ch-st-para"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mat-st no" id="matSt">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="matStTx">尚未提供教材</span>
+    </div>
+
+    <div class="brow">
+      <span class="next-note" id="s1NextHint" aria-live="polite">先選科目、年級，並提供教材。</span>
+      <button class="btn btn-p" id="btn-s1-next" onclick="toStep2()" disabled>
+        下一步
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ STEP 2CH - 國語科專屬（與 s1 同層！） ═══ -->
+  <div id="s2ch" class="pnl hide">
+    <div class="pnl-t">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      <span id="s2chTitleText">國語科評量向度設定</span>
+    </div>
+    <div class="step-guide">
+      <div class="guide-label">目前要做</div>
+      <div class="guide-title" id="s2chGuideTitle">設定各評量向度配分</div>
+      <div class="guide-text" id="s2chGuideText">系統會依你上傳的素材推薦可出題向度；請把所有向度配分調整到 100 分。</div>
+    </div>
+    <p class="pnl-desc" id="s2chDesc">依據試題審核表設定本次考試各向度的配分。系統已根據年級帶入建議比例，您可依需求調整。</p>
+    <div id="s2ch-content"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid var(--border-light);margin-top:8px;">
+      <span id="s2chTotalLabel" style="font-size:13px;color:var(--text-3)">所有向度配分合計需等於 100 分</span>
+      <span id="ch-total" style="font-size:16px;font-weight:900;color:var(--err)">0 分</span>
+    </div>
+    <div class="next-note warn" id="s2chNextHint" aria-live="polite">請先把配分合計調整為 100 分。</div>
+    <div class="brow">
+      <button class="btn btn-s" onclick="goStep(1)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m7-7-7 7 7 7"/></svg>
+        上一步
+      </button>
+      <button class="btn btn-p" id="btn-s2ch-next" onclick="toStep5Ch()" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        <span id="btnS2chNextLabel">開始出題</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ STEP 2 - 一般科目 ═══ -->
+  <div id="s2" class="pnl hide">
+    <div class="pnl-t">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      學習目標分析
+    </div>
+    <div class="step-guide">
+      <div class="guide-label">目前要做</div>
+      <div class="guide-title">確認哪些學習目標要納入本次任務</div>
+      <div class="guide-text">保留要評量的目標，調整比重；合計 100% 後即可進入題型選擇。</div>
+    </div>
+    <p class="pnl-desc">系統已成功擷取單元與目標，請確認目標內容與配分比重（可自由勾選或修改%數）。</p>
+    <div id="s2-ld" class="ld-wrap">
+      <div class="ld-spin"></div>
+      <div class="ld-msg">AI 正在分析教材中的學習目標...</div>
+      <div class="ld-sub" id="s2-ldSub">通常需要 10-20 秒</div>
+    </div>
+    <div id="s2-result" class="hide">
+      <div id="s2-summary" style="font-size:13px;color:var(--text-2);margin-bottom:14px;font-weight:500;"></div>
+      <div id="objList"></div>
+      <div class="obj-summary">
+        <span style="color:var(--text-3)">比重合計需等於 100%</span>
+        <span class="obj-total" id="objTotal">100%</span>
+      </div>
+      <div class="next-note" id="s2NextHint" aria-live="polite">確認目標與比重後，按「下一步：選題型」。</div>
+    </div>
+    <div id="s2-err" class="smsg err hide">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      <span id="s2-errMsg"></span>
+    </div>
+    <div class="brow">
+      <button class="btn btn-s" onclick="goStep(1)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m7-7-7 7 7 7"/></svg>
+        上一步
+      </button>
+      <button class="btn btn-p" id="btn-s2next" onclick="toStep3()" disabled>
+        下一步：選題型
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ STEP 3 ═══ -->
+  <div id="s3" class="pnl hide">
+    <div class="pnl-t">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      選擇題型
+    </div>
+    <div class="step-guide">
+      <div class="guide-label">目前要做</div>
+      <div class="guide-title">決定這次要產生哪些題型</div>
+      <div class="guide-text">保留你想要的題型即可。題庫模式會產生可挑選題目；考卷模式會接著設定配分。</div>
+    </div>
+    <p class="pnl-desc">根據 <strong id="s3-info"></strong> 的特性，系統推薦以下題型：</p>
+    <div class="qtg" id="qtGrid"></div>
+    <div class="next-note ok" id="s3NextHint" aria-live="polite">已選 0 種題型。</div>
+    <div class="brow">
+      <button class="btn btn-s" onclick="goStep(2)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m7-7-7 7 7 7"/></svg>
+        上一步
+      </button>
+      <button class="btn btn-p" id="btnS3Next" onclick="toStep4()">
+        <span id="s3NextLabel">下一步：配分</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ STEP 4 ═══ -->
+  <div id="s4" class="pnl hide">
+    <div class="pnl-t">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <span id="s4TitleText">配分設定</span>
+    </div>
+    <div class="step-guide">
+      <div class="guide-label">目前要做</div>
+      <div class="guide-title" id="s4GuideTitle">把題數與每題分數調整到總分 100 分</div>
+      <div class="guide-text" id="s4GuideText">表格下方會即時顯示差距；合計剛好 100 分後，才會開放開始出題。</div>
+    </div>
+    <p class="pnl-desc" id="s4Desc">調整每大題的題數與每題分數，可用箭頭調整出題順序。總分需為 100 分。</p>
+    <table class="stbl">
+      <thead id="scHead"><tr><th style="width:50px">順序</th><th>大題</th><th style="width:70px">題數</th><th style="width:70px">每題</th><th style="width:70px;text-align:right">小計</th></tr></thead>
+      <tbody id="scBody"></tbody>
+    </table>
+    <div class="stbl-total" id="scTotal">合計：100 分</div>
+    <div class="next-note" id="s4NextHint" aria-live="polite">合計 100 分後即可開始出題。</div>
+    <div class="brow">
+      <button class="btn btn-s" onclick="goStep(3)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m7-7-7 7 7 7"/></svg>
+        上一步
+      </button>
+      <button class="btn btn-p" id="btnGen" onclick="generate()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        <span id="btnGenLabel">開始出題</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ STEP 5 ═══ -->
+  <div id="s5" class="hide">
+    <div id="s5-ld" class="pnl">
+      <div class="ld-wrap">
+        <div class="ld-spin"></div>
+        <div class="ld-msg" id="s5-ldMsg">AI 正在根據教材與學習目標命題中...</div>
+        <div class="ld-sub" id="s5-ldSub">通常需要 30-60 秒，依題數而定</div>
+        <!-- [修改4] 計時器 -->
+        <div class="ld-timer" id="s5-timer"></div>
+      </div>
+    </div>
+    <div id="s5-ok" class="out-area hide">
+      <div class="pnl-t">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span id="resultTitle">出題結果</span>
+      </div>
+      <div class="result-guide" id="resultGuide">
+        <div class="result-step"><strong>1. 先複製考卷</strong>貼到文件後，檢查題目、答案與排版。</div>
+        <div class="result-step"><strong>2. 下載審核表</strong>交給命題與審題流程使用。</div>
+        <div class="result-step"><strong>3. 需要配圖才產生</strong>按出圖指令按鈕，再貼到 ChatGPT 生成圖片。</div>
+      </div>
+      <div class="run-meta hide" id="runMeta"></div>
+      <div class="out-txt" id="outTxt"></div>
+      <div class="out-acts">
+        <button class="btn btn-p" onclick="copyAll(event)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <span id="copyAllLabel">複製考卷</span>
+        </button>
+        <button class="btn btn-s" id="btnCopyAns" onclick="copyAns(event)">複製答案卷</button>
+        <button class="btn btn-s" id="btnCopyObj" onclick="copyObj(event)">複製目標統計</button>
+        <button class="btn btn-s" id="btnGenImgPrompt" onclick="generateImagePrompts(event)">產生 ChatGPT 出圖指令</button>
+        <button class="btn btn-s" id="btnCopyImg" onclick="copyImg(event)">複製 ChatGPT 出圖指令</button>
+        <button class="btn btn-s" id="btnDownloadReview" onclick="downloadReview()">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          下載專屬審核表
+        </button>
+        <button class="btn btn-s" onclick="goStep(1)">重新出題</button>
+      </div>
+    </div>
+    <div id="s5-err" class="pnl hide">
+      <div class="smsg err">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        <span id="s5-errMsg"></span>
+      </div>
+      <div class="brow">
+        <button class="btn btn-s" onclick="goStep(1)">從頭開始</button>
+        <button class="btn btn-s" onclick="goStep(4)">返回重試</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="ftr">
+    <div class="ftr-line">出題結果僅供參考，請老師審題後使用</div>
+    <div id="copyrightLine">COPYRIGHT © 2026 HSINCHU NEI HU PRIMARY SCHOOL
+總務主任 江志宏
+smallcannon@nhps.hc.edu.tw｜03-5373184 #130
+系統：輔助命題系統｜最後維護：2026-05</div>
+    <div style="margin-top:8px;">
+      <label style="font-size:11px;color:var(--text-3);cursor:pointer;user-select:none;">
+        <input type="checkbox" id="wsToggle" onchange="toggleWorkshop()" style="vertical-align:middle;margin-right:4px;">
+        研習模式（多人同時使用時開啟，自動錯開請求）
+      </label>
+    </div>
+  </footer>
+</div>
+
+<!-- 手動複製 Modal -->
+<div id="copyModal" class="modal-bg hide">
+  <div class="modal copy-modal">
+    <h3>手動複製</h3>
+    <p id="copyModalMsg">瀏覽器無法確認剪貼簿內容。下方文字已自動選取，請按 Ctrl+C 複製。</p>
+    <textarea id="copyText" class="copy-text" readonly></textarea>
+    <div class="brow">
+      <button class="btn btn-s" onclick="document.getElementById('copyModal').classList.add('hide')">關閉</button>
+      <button class="btn btn-p" onclick="selectCopyText()">重新選取文字</button>
+    </div>
+  </div>
+</div>
+
+<!-- .doc 格式提示 Modal -->
+<div id="docModal" class="modal-bg hide">
+  <div class="modal">
+    <h3>不支援 .doc 格式</h3>
+    <p>本系統僅支援 <strong>.docx</strong> 與 <strong>.pdf</strong> 格式。<br><br>
+    目前公開安全版不提供轉檔工具下載。若您的教材是舊版 .doc 格式，建議先使用 Word、Google 文件、LibreOffice 或其他可信工具，另存為 .docx 或匯出為 .pdf 後再上傳。<br><br>
+    請勿上傳含學生個資、未公開校務資料或敏感案件內容的檔案。</p>
+    <div class="brow"><span></span><button class="btn btn-s" onclick="document.getElementById('docModal').classList.add('hide')">了解</button></div>
+  </div>
+</div>
+<script>
+// ═══════════════════════════════════════
+// 工具函式
+// ═══════════════════════════════════════
+function escHTML(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function safeGet(k,d){ try{ return localStorage.getItem(k)??d; }catch{ return d; } }
+function safeSet(k,v){ try{ localStorage.setItem(k,v); }catch{} }
+
+// ═══════════════════════════════════════
+// 應用模式
+// ═══════════════════════════════════════
+const APP_MODE = 'public_prompt_only';
+
+function isPublicPromptOnlyMode(){
+  return APP_MODE === 'public_prompt_only';
+}
+
+// ═══════════════════════════════════════
+// 全域狀態
+// ═══════════════════════════════════════
+const S = {
+  step: 1,
+  subject:'', grade:'', scope:'', difficulty:'balanced',
+  files:[], matText:'', objectives:[], totalHours:0,
+  selTypes:[], selTypeIds:[], scores:[],
+  outputMode:'exam',
+  output:'', lastRunMeta:null,
+  workshopMode: safeGet('nhps_workshop','false')==='true',
+  // 國語科專屬
+  chFiles:{ text:[], word:[], sent:[], para:[] },
+  chMat:{ text:'', word:'', sent:'', para:'' },
+  chScores:{},
+};
+
+const COPYRIGHT_NOTICE = window.NHPS_PROMPTS&&typeof window.NHPS_PROMPTS.buildCopyrightNotice==='function'
+  ? window.NHPS_PROMPTS.buildCopyrightNotice()
+  : 'COPYRIGHT © 2026 HSINCHU NEI HU PRIMARY SCHOOL\n總務主任 江志宏\nsmallcannon@nhps.hc.edu.tw｜03-5373184 #130\n系統：輔助命題系統｜最後維護：2026-05';
+const copyrightEl = document.getElementById('copyrightLine');
+if (copyrightEl) copyrightEl.textContent = COPYRIGHT_NOTICE;
+
+const NEXT_ARROW_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>';
+
+// ═══════════════════════════════════════
+// 難度設定
+// ═══════════════════════════════════════
+const DIFF = {
+  easy:    { label:'基礎為主', basic:70, mid:20, adv:10 },
+  balanced:{ label:'均衡混合', basic:40, mid:40, adv:20 },
+  hard:    { label:'偏難挑戰', basic:20, mid:40, adv:40 },
+};
+
+// ═══════════════════════════════════════
+// 題型資料
+// ═══════════════════════════════════════
+const BASE_QT = [
+  { id:'MC',     name:'選擇題（基本知能）',   desc:'測驗字詞義、標點、修辭、課文記憶等基礎概念', dc:10, de:2 },
+  { id:'MC_PRO', name:'選擇題（情境素養）',   desc:'✨【啟動 Pro 引擎】AI 創作全新生活情境或短文出題', dc:3, de:2 },
+  { id:'TF',     name:'是非題',               desc:'○/✕ 判斷對錯', dc:5, de:2 },
+  { id:'FILL',   name:'填充題',               desc:'在空格中填入正確答案', dc:5, de:2 },
+  { id:'SA',     name:'簡答題',               desc:'簡短文字作答', dc:2, de:5 },
+  { id:'RG',     name:'題組（閱讀素養題）',   desc:'✨【啟動 Pro 引擎】一段情境＋2-3道子題', dc:1, de:10 },
+];
+const SUBJ_QT = {
+  '數學':[
+    { id:'CALC',    name:'計算題/算算看',     desc:'純數字直式運算', dc:5, de:4 },
+    { id:'WORD',    name:'應用題/做法與答案', desc:'生活情境列式求解', dc:3, de:5 },
+    { id:'COMPARE', name:'比比看/連連看',     desc:'大小比較或圖形配對', dc:3, de:2 },
+    { id:'PATTERN', name:'找規律題',           desc:'觀察數列或圖形找規律', dc:2, de:4 },
+  ],
+  '自然':[
+    { id:'EXP',     name:'實驗與觀察題組（素養題）', desc:'✨【啟動 Pro 引擎】判斷實驗步驟或觀察結果', dc:2, de:5 },
+    { id:'CHART',   name:'圖表判讀題',               desc:'看實驗數據或構造圖回答', dc:5, de:2 },
+    { id:'MATCH',   name:'配合連線題',               desc:'特徵配對（如昆蟲與棲地）', dc:3, de:2 },
+    { id:'CLASS',   name:'分類勾選題',               desc:'勾選符合的科學項目', dc:3, de:2 },
+    { id:'VAR',     name:'變因控制題',               desc:'辨別操縱、控制、應變變因', dc:2, de:5 },
+    { id:'SCIREAD', name:'科學閱讀測驗',             desc:'✨【啟動 Pro 引擎】AI 自創科普短文＋選擇題＋開放問答', dc:1, de:15 },
+  ],
+  '社會':[
+    { id:'MAP',      name:'圖表與地圖判讀題',   desc:'看地圖、氣候圖、統計表作答', dc:5, de:2 },
+    { id:'MATCH',    name:'配合連線題',           desc:'歷史人物、地理特產配對', dc:5, de:2 },
+    { id:'SCENARIO', name:'情境簡答題（素養題）', desc:'✨【啟動 Pro 引擎】生活情境中的公民素養判斷', dc:2, de:5 },
+    { id:'CHECK',    name:'勾選題/勾勾看',       desc:'複選符合的概念項目', dc:3, de:2 },
+    { id:'TIMELINE', name:'時間排序題',           desc:'按時序排列歷史或公民事件', dc:2, de:4 },
+    { id:'COMPARE',  name:'資料比較題',           desc:'比較史料或圖表找異同', dc:2, de:5 },
+  ],
+  '英語':[
+    { id:'LISTEN',   name:'聽力測驗腳本',       desc:'產生聽力文字腳本，由老師錄音施測', dc:5, de:3 },
+    { id:'CLOZE',    name:'克漏字填空',           desc:'Fill in the blanks', dc:5, de:2 },
+    { id:'UNSCR',    name:'句子重組',             desc:'打散單字重新排列成正確句子', dc:3, de:4 },
+    { id:'READ',     name:'閱讀測驗（素養題）',   desc:'✨【啟動 Pro 引擎】Reading Comprehension', dc:3, de:4 },
+    { id:'IMGMATCH', name:'圖文配對',             desc:'單字與圖片連線 Look and Match', dc:5, de:2 },
+    { id:'READMATCH',name:'閱讀配對',             desc:'問句與答句配對 Read and Match', dc:3, de:2 },
+    { id:'DIALOG',   name:'對話完成題（素養題）', desc:'✨【啟動 Pro 引擎】依情境補完對話空格', dc:3, de:3 },
+  ],
+};
+
+// ═══════════════════════════════════════
+// 國語科許育健評量向度
+// ═══════════════════════════════════════
+const CH_ZONES = [
+  { id:'word', label:'字詞短語', badgeClass:'z2', grades:{ low:50, mid:30, high:20 },
+    items:[
+      { key:'正確字音', ex:'指認/習寫',         mat:['word'] },
+      { key:'近字音',   ex:'語境辨析',           mat:['word'] },
+      { key:'多字音',   ex:'語境辨析',           mat:['word'] },
+      { key:'變字音',   ex:'語境辨析',           mat:['word'] },
+      { key:'確認字形', ex:'指認/習寫',           mat:['word'] },
+      { key:'筆畫筆順', ex:'筆畫名稱/習寫',       mat:['word'] },
+      { key:'分辨部首', ex:'部首意義/常用部首',   mat:['word'] },
+      { key:'部件組合', ex:'常見部件/結構原則',   mat:['word'] },
+      { key:'造字原則', ex:'六書',               mat:['word'] },
+      { key:'字詞釋義', ex:'字詞義解釋',         mat:['word'] },
+      { key:'近義字詞', ex:'辨識/比較應用',       mat:['word'] },
+      { key:'反義字詞', ex:'區別/比較應用',       mat:['word'] },
+      { key:'類詞應用', ex:'量詞/疊詞/狀聲詞',   mat:['word'] },
+      { key:'四字詞語', ex:'解釋/應用',           mat:['word'] },
+      { key:'結構詞語', ex:'聯合/偏正/動實結構', mat:['word'] },
+    ]
+  },
+  { id:'sent', label:'句式語法', badgeClass:'z3', grades:{ low:30, mid:50, high:30 },
+    items:[
+      { key:'句意理解', ex:'解釋句義/指認句義',   mat:['sent'] },
+      { key:'文句組成', ex:'完成句子/造句',       mat:['sent'] },
+      { key:'句型辨識', ex:'照樣造句/句型練習',   mat:['sent'] },
+      { key:'句式變化', ex:'換句話說/合併句子',   mat:['sent'] },
+      { key:'標點符號', ex:'常用符號理解及應用', mat:['sent'] },
+      { key:'句群關係', ex:'對話練習/句群判斷',   mat:['sent'] },
+      { key:'常用修辭', ex:'擬人/設問/誇飾/排比',mat:['sent'] },
+    ]
+  },
+  { id:'para', label:'段篇讀寫', badgeClass:'z4', grades:{ low:20, mid:20, high:50 },
+    items:[
+      { key:'提取訊息', ex:'特定詞句/事件細節',   mat:['para','text'] },
+      { key:'推論訊息', ex:'事件因果/角色關係',   mat:['para','text'] },
+      { key:'整合詮釋', ex:'全文主題/跨段比較',   mat:['para','text'] },
+      { key:'比較評估', ex:'文章評析/作者意圖',   mat:['para','text'] },
+      { key:'摘要整合', ex:'段落大意/文章結構',   mat:['para'] },
+      { key:'推估主旨', ex:'寫作目的/隱含道理',   mat:['para'] },
+      { key:'文體應用', ex:'便條/日記/書信',       mat:['para'] },
+      { key:'句子變化', ex:'擴寫/縮寫/改寫',       mat:['para','sent'] },
+      { key:'限制習寫', ex:'限內容/限形式',         mat:['para'] },
+    ]
+  }
+];
+
+function getGradeLevel(g){ return ['一年級','二年級'].includes(g)?'low':['三年級','四年級'].includes(g)?'mid':'high'; }
+
+// ═══════════════════════════════════════
+// 國語科檔案上傳（四個區域）
+// ═══════════════════════════════════════
+const CH_ZONES_MAP = [
+  { zoneId:'text', upzId:'ch-upz-text', fileId:'ch-file-text', stId:'ch-st-text' },
+  { zoneId:'word', upzId:'ch-upz-word', fileId:'ch-file-word', stId:'ch-st-word' },
+  { zoneId:'sent', upzId:'ch-upz-sent', fileId:'ch-file-sent', stId:'ch-st-sent' },
+  { zoneId:'para', upzId:'ch-upz-para', fileId:'ch-file-para', stId:'ch-st-para' },
+];
+
+function initChUploadZones() {
+  CH_ZONES_MAP.forEach(({ zoneId, upzId, fileId, stId }) => {
+    const upz = document.getElementById(upzId);
+    const fi  = document.getElementById(fileId);
+    upz.addEventListener('dragover', e => { e.preventDefault(); upz.classList.add('drag'); });
+    upz.addEventListener('dragleave', () => upz.classList.remove('drag'));
+    upz.addEventListener('drop', e => {
+      e.preventDefault(); upz.classList.remove('drag');
+      handleChFiles(zoneId, stId, e.dataTransfer.files);
+    });
+    fi.addEventListener('change', e => {
+      handleChFiles(zoneId, stId, e.target.files);
+      fi.value = '';
+    });
+  });
+}
+
+async function handleChFiles(zoneId, stId, files) {
+  if (S.chFiles[zoneId].length + files.length > 40) {
+    alert('為確保系統效能，單一向度最多上傳 40 個檔案，請分次處理或合併檔案。');
+    return;
+  }
+  const stEl = document.getElementById(stId);
+  stEl.textContent = '讀取中...';
+  let addedCount = 0, addedChars = 0;
+
+  for (const f of files) {
+    const name = f.name.toLowerCase();
+    if (!name.endsWith('.docx') && !name.endsWith('.pdf')) {
+      if (name.endsWith('.doc')) document.getElementById('docModal').classList.remove('hide');
+      else alert('支援 .docx 與 .pdf 格式：' + f.name);
+      continue;
+    }
+    try {
+      const ab = await f.arrayBuffer();
+      let text = '';
+      if (name.endsWith('.docx')) {
+        const result = await mammoth.extractRawText({ arrayBuffer: ab });
+        text = result.value.trim();
+      } else {
+        text = await extractPdfText(ab);
+      }
+      if (text.length < 20) {
+        alert(`「${f.name}」內容過少，可能是掃描檔，請用其他方式提供。`);
+        continue;
+      }
+      S.chFiles[zoneId].push({ name: f.name, text });
+      S.chMat[zoneId] = S.chFiles[zoneId].map(f => f.text).join('\n\n');
+      addedCount++;
+      addedChars += text.length;
+    } catch(err) {
+      alert(`「${f.name}」讀取失敗：${err.message}`);
+    }
+  }
+
+  const total = S.chFiles[zoneId];
+  if (total.length > 0) {
+    const totalChars = total.reduce((a,f) => a+f.text.length, 0);
+    stEl.textContent = `✅ 已上傳 ${total.length} 個檔案，共 ${totalChars.toLocaleString()} 字`;
+  } else {
+    stEl.textContent = '';
+  }
+  updMatSt();
+  updateStep1Guide();
+}
+
+// ═══════════════════════════════════════
+// 一般科目檔案上傳
+// ═══════════════════════════════════════
+const upzone = document.getElementById('upzone');
+const fileIn  = document.getElementById('fileIn');
+upzone.addEventListener('dragover', e => { e.preventDefault(); upzone.classList.add('drag'); });
+upzone.addEventListener('dragleave', () => upzone.classList.remove('drag'));
+upzone.addEventListener('drop', e => { e.preventDefault(); upzone.classList.remove('drag'); handleFiles(e.dataTransfer.files); });
+fileIn.addEventListener('change', e => handleFiles(e.target.files));
+
+async function handleFiles(files) {
+  for (const f of files) {
+    const name = f.name.toLowerCase();
+    const isDocx = name.endsWith('.docx'), isPdf = name.endsWith('.pdf');
+    if (!isDocx && !isPdf) {
+      if (name.endsWith('.doc')) document.getElementById('docModal').classList.remove('hide');
+      else alert('支援 .docx 與 .pdf 格式：' + f.name);
+      continue;
+    }
+    if (S.files.length >= 20) { alert('最多上傳 20 個檔案'); break; }
+    try {
+      const ab = await f.arrayBuffer();
+      let text = '';
+      if (isDocx) { const r = await mammoth.extractRawText({ arrayBuffer: ab }); text = r.value.trim(); }
+      else { text = await extractPdfText(ab); }
+      if (text.length < 20) { alert(`「${f.name}」內容過少，可能是掃描檔，請改用文字貼上。`); continue; }
+      S.files.push({ name: f.name, size: f.size, text });
+    } catch(err) { alert(`「${f.name}」讀取失敗：${err.message}`); }
+  }
+  fileIn.value = '';
+  renderFiles();
+  updMatSt();
+  updateStep1Guide();
+}
+
+async function extractPdfText(ab) {
+  const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+  let t = '';
+  for (let i=1; i<=pdf.numPages; i++) {
+    const p = await pdf.getPage(i);
+    const c = await p.getTextContent();
+    t += c.items.map(x=>x.str).join(' ') + '\n';
+  }
+  return t.trim();
+}
+
+function rmFile(i) { S.files.splice(i,1); renderFiles(); updMatSt(); updateStep1Guide(); }
+
+function renderFiles() {
+  const el = document.getElementById('flist');
+  if (!S.files.length) { el.innerHTML=''; return; }
+  el.innerHTML = S.files.map((f,i) => {
+    const sz = f.size<1048576 ? (f.size/1024).toFixed(0)+' KB' : (f.size/1048576).toFixed(1)+' MB';
+    return `<div class="fitem">
+      <span class="fitem-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+      <span class="fitem-name">${escHTML(f.name)}</span>
+      <span class="fitem-info">${sz} · ${f.text.length.toLocaleString()} 字</span>
+      <button class="fitem-rm" onclick="rmFile(${i})"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>`;
+  }).join('');
+}
+
+function swTab(t) {
+  document.querySelectorAll('.mtab').forEach(e=>e.classList.remove('on'));
+  document.querySelectorAll('.mtc').forEach(e=>e.classList.remove('on'));
+  document.querySelector(`.mtab[onclick="swTab('${t}')"]`).classList.add('on');
+  document.getElementById(t==='up'?'tab-up':'tab-tx').classList.add('on');
+}
+
+function setGuideChip(id, done, text) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = `${done ? '✓' : '•'} ${text}`;
+  el.classList.toggle('done', !!done);
+  el.classList.toggle('warn', !done);
+}
+
+function setNextNote(id, text, ok) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.classList.toggle('ok', !!ok);
+  el.classList.toggle('warn', !ok);
+}
+
+function isBankMode(){
+  return S.outputMode === 'bank' || S.outputMode === 'competency_assessment';
+}
+
+function isCompetencyAssessmentMode(){
+  return S.outputMode === 'competency_assessment';
+}
+
+function getOutputModeLabel(){
+  if(isCompetencyAssessmentMode()) return '學力檢測（能力導向）模式';
+  return isBankMode() ? '產出題庫' : '正式考卷';
+}
+
+function setOutputMode(mode){
+  S.outputMode = mode;
+  updateModeUI();
+  updateStep1Guide();
+  if(S.step===4 && S.selTypes.length){ renderScTable(); updSc(); }
+  if(S.step==='2ch') updChTotal();
+}
+
+function updateModeUI(){
+  const bank = isBankMode();
+  const competency = isCompetencyAssessmentMode();
+  const isChinese = document.getElementById('subject').value === '國語';
+  const examBtn = document.getElementById('modeExam');
+  const bankBtn = document.getElementById('modeBank');
+  const competencyBtn = document.getElementById('modeCompetency');
+  if(examBtn) examBtn.classList.toggle('on', S.outputMode === 'exam');
+  if(bankBtn){
+    bankBtn.classList.toggle('on', S.outputMode === 'bank');
+    bankBtn.disabled = false;
+    bankBtn.title = isChinese ? '國語科題庫會依評量向度產生可挑選題目。' : '';
+  }
+  if(competencyBtn){
+    competencyBtn.classList.toggle('on', competency);
+    competencyBtn.disabled = false;
+    competencyBtn.title = '本模式參考學力檢測常見題型精神，產出內容仍須教師審查。';
+  }
+
+  const s4Tab = document.querySelector('.stp[data-s="4"] .stp-t');
+  const s5Tab = document.querySelector('.stp[data-s="5"] .stp-t');
+  if(s4Tab) s4Tab.textContent = bank ? '題數' : '配分';
+  if(s5Tab) s5Tab.textContent = bank ? '題庫' : '出題';
+
+  const s4Title = document.getElementById('s4GuideTitle');
+  const s4Text = document.getElementById('s4GuideText');
+  const s4Desc = document.getElementById('s4Desc');
+  const s4TitleText = document.getElementById('s4TitleText');
+  const s3NextLabel = document.getElementById('s3NextLabel');
+  if(s4TitleText) s4TitleText.textContent = bank ? '題庫數量設定' : '配分設定';
+  if(s3NextLabel) s3NextLabel.textContent = bank ? '下一步：設定題庫題數' : '下一步：配分';
+  if(s4Title) s4Title.textContent = bank ? '設定每種題型要產生幾題' : '把題數與每題分數調整到總分 100 分';
+  if(s4Text) s4Text.textContent = bank ? '這裡只決定題庫份量，不做正式配分；老師後續可從題庫挑題組卷。' : '表格下方會即時顯示差距；合計剛好 100 分後，才會開放開始出題。';
+  if(s4Desc) s4Desc.textContent = bank ? '調整每個題型要產生的題數，可用箭頭調整題型順序。' : '調整每大題的題數與每題分數，可用箭頭調整出題順序。總分需為 100 分。';
+
+  const promptOnly = isPublicPromptOnlyMode();
+  const genLabel = document.getElementById('btnGenLabel');
+  if(genLabel) genLabel.textContent = promptOnly ? '產生命題 Prompt' : (competency ? '產出能力導向題庫' : (bank ? '產出題庫' : '開始出題'));
+  const resultTitle = document.getElementById('resultTitle');
+  if(resultTitle) resultTitle.textContent = promptOnly ? '命題 Prompt 草稿' : (competency ? '能力導向題庫' : (bank ? '產出題庫' : '出題結果'));
+  const copyAllLabel = document.getElementById('copyAllLabel');
+  if(copyAllLabel) copyAllLabel.textContent = promptOnly ? '複製 Prompt' : (bank ? '複製題庫' : '複製考卷');
+  const btnCopyAns = document.getElementById('btnCopyAns');
+  if(btnCopyAns) btnCopyAns.textContent = bank ? '複製答案索引' : '複製答案卷';
+  const btnCopyObj = document.getElementById('btnCopyObj');
+  if(btnCopyObj) btnCopyObj.textContent = bank ? '複製目標覆蓋' : '複製目標統計';
+  if(btnCopyAns) btnCopyAns.style.display = promptOnly ? 'none' : '';
+  if(btnCopyObj) btnCopyObj.style.display = promptOnly ? 'none' : '';
+  const btnGenImgPrompt = document.getElementById('btnGenImgPrompt');
+  if(btnGenImgPrompt) btnGenImgPrompt.style.display = promptOnly ? 'none' : '';
+  const btnCopyImg = document.getElementById('btnCopyImg');
+  if(btnCopyImg) btnCopyImg.style.display = promptOnly ? 'none' : '';
+  const reviewBtn = document.getElementById('btnDownloadReview');
+  if(reviewBtn) reviewBtn.style.display = (bank || promptOnly) ? 'none' : '';
+  const resultGuide = document.getElementById('resultGuide');
+  if(resultGuide){
+    resultGuide.innerHTML = promptOnly ? `
+      <div class="result-step"><strong>1. 複製 Prompt</strong>公開安全版不直接呼叫 AI 後端；請將 Prompt 貼到 ChatGPT、Gemini 或 Claude 使用。</div>
+      <div class="result-step"><strong>2. 教師審查</strong>AI 產出內容須由教師審查、修正後使用，不代表學校官方題庫或正式學力檢測標準。</div>
+      <div class="result-step"><strong>3. 自行整理</strong>AI 回傳後再由教師自行挑題、修題、整理答案與學習目標。</div>
+    ` : (bank ? `
+      <div class="result-step"><strong>1. 先挑題</strong>從題庫中挑出適合班級程度與教材內容的題目。</div>
+      <div class="result-step"><strong>2. 再組卷</strong>複製題庫或答案索引，貼到文件後自行排版成正式考卷。</div>
+      <div class="result-step"><strong>3. 最後補圖</strong>選定需要配圖的題目後，再產生 ChatGPT 出圖指令。</div>
+    ` : `
+      <div class="result-step"><strong>1. 先複製考卷</strong>貼到文件後，檢查題目、答案與排版。</div>
+      <div class="result-step"><strong>2. 下載審核表</strong>交給命題與審題流程使用。</div>
+      <div class="result-step"><strong>3. 需要配圖才產生</strong>按出圖指令按鈕，再貼到 ChatGPT 生成圖片。</div>
+    `);
+  }
+  updateChineseModeUI(bank);
+}
+
+function updateChineseModeUI(bank){
+  const title = document.getElementById('s2chTitleText');
+  const guideTitle = document.getElementById('s2chGuideTitle');
+  const guideText = document.getElementById('s2chGuideText');
+  const desc = document.getElementById('s2chDesc');
+  const totalLabel = document.getElementById('s2chTotalLabel');
+  const nextLabel = document.getElementById('btnS2chNextLabel');
+  if(title) title.textContent = bank ? '國語科題庫向度設定' : '國語科評量向度設定';
+  if(guideTitle) guideTitle.textContent = bank ? '設定題庫要涵蓋的評量向度' : '設定各評量向度配分';
+  if(guideText) guideText.textContent = bank
+    ? '系統會依你上傳的素材產出可挑選題庫；請把各向度比重調整到 100，作為題庫覆蓋依據。'
+    : '系統會依你上傳的素材推薦可出題向度；請把所有向度配分調整到 100 分。';
+  if(desc) desc.textContent = bank
+    ? '這裡設定題庫覆蓋比重，不是正式試卷配分；老師後續可從題庫挑題組卷。'
+    : '依據試題審核表設定本次考試各向度的配分。系統已根據年級帶入建議比例，您可依需求調整。';
+  if(totalLabel) totalLabel.textContent = bank ? '所有向度比重合計需等於 100' : '所有向度配分合計需等於 100 分';
+  if(nextLabel) nextLabel.textContent = bank ? '產出題庫' : '開始出題';
+}
+
+function updateStep1Guide() {
+  const subj = document.getElementById('subject').value;
+  const grade = document.getElementById('grade').value;
+  const scope = document.getElementById('scope').value.trim();
+  const difficulty = document.getElementById('difficulty').value;
+  const diffLabel = (DIFF[difficulty]&&DIFF[difficulty].label) || '均衡混合';
+  const subjectDone = !!subj;
+  const gradeDone = !!grade;
+  const setupDone = !!(subj && grade);
+  const materialDone = hasMat();
+  const ready = setupDone && materialDone;
+  const isChinese = subj === '國語';
+  const nextText = isChinese ? (isBankMode() ? '下一步：設定題庫向度' : '下一步：設定評量向度') : (isBankMode() ? '下一步：分析目標' : '下一步：分析學習目標');
+
+  setGuideChip('guideSubjectChip', subjectDone, subjectDone ? `科目：${subj}` : '選科目');
+  setGuideChip('guideGradeChip', gradeDone, gradeDone ? `年級：${grade}` : '選年級');
+  setGuideChip('guideModeChip', true, getOutputModeLabel());
+  setGuideChip('guideOptionChip', true, scope ? `難度：${diffLabel}；範圍已填` : `難度：${diffLabel}；範圍選填`);
+  setGuideChip('guideMaterialChip', materialDone, materialDone ? '教材已提供' : (isChinese ? '上傳至少一個向度素材' : '上傳教材或貼上文字'));
+  setGuideChip('guideNextChip', ready, ready ? nextText : '完成必要項目才能下一步');
+
+  const title = document.getElementById('s1GuideTitle');
+  const text = document.getElementById('s1GuideText');
+  if (title) title.textContent = ready ? '資料已齊，可以進入下一步' : '先選科目與年級，再提供教材';
+  if (text) text.textContent = ready
+    ? (isChinese ? (isBankMode() ? '接下來會依國語科素材設定題庫向度比重。' : '接下來會依國語科素材設定評量向度配分。') : (isCompetencyAssessmentMode() ? '接下來會分析教材目標，再設定能力導向題庫的題型與題數。' : (isBankMode() ? '接下來會分析教材目標，再設定題庫的題型與題數。' : '接下來會分析教材中的學習目標。')))
+    : buildStep1GuideText({subj,grade,scope,materialDone,isChinese});
+
+  setNextNote('s1NextHint', ready ? `已準備好，請按「${nextText}」。` : '先選科目、年級，並提供教材。', ready);
+  const btn = document.getElementById('btn-s1-next');
+  if (btn) {
+    btn.disabled = !ready;
+    btn.innerHTML = `${ready ? nextText : '先完成必填資料'} ${NEXT_ARROW_SVG}`;
+  }
+}
+
+function buildStep1GuideText(state){
+  if(!state.subj) return '先選科目；系統會依科目切換教材上傳提示與後續流程。';
+  if(!state.grade) return `已選 ${state.subj}，接著選年級。`;
+  if(!state.materialDone) return state.isChinese
+    ? `已選 ${state.grade}${state.subj}，請至少上傳一個國語評量向度素材。`
+    : `已選 ${state.grade}${state.subj}，接著上傳教材或貼上文字。`;
+  if(state.scope) return '範圍備註已記錄，按下一步即可繼續。';
+  return '必要項目已完成；範圍備註可留空，系統會依上傳教材命題。';
+}
+
+// ═══════════════════════════════════════
+// 科目切換
+// ═══════════════════════════════════════
+const MAT_TIPS = {
+  '國語':'請依向度分區上傳素材，系統會自動推薦對應的評量向度。',
+  '數學':'建議上傳：課本 + 習作（含計算題與應用題）。',
+  '自然':'建議上傳：教案（含學習目標）或課本。',
+  '社會':'建議上傳：課本 + 習作。',
+  '英語':'建議上傳：課本（含單字表、句型）+ 習作。',
+};
+
+document.getElementById('subject').addEventListener('change', function() {
+  const isChinese = this.value === '國語';
+  const tip = MAT_TIPS[this.value];
+  const tipEl = document.getElementById('matTip');
+  if (tip) { document.getElementById('matTipTx').textContent = tip; tipEl.classList.remove('hide'); }
+  else { tipEl.classList.add('hide'); }
+  document.getElementById('normalMatArea').classList.toggle('hide', isChinese);
+  document.getElementById('chineseMatArea').classList.toggle('hide', !isChinese);
+  document.getElementById('btn-s1-next').innerHTML = isChinese
+    ? '下一步：設定評量向度 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>'
+    : '下一步 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>';
+  // [修改3] 換科目時清空舊題型選擇，避免跨科目殘留
+  S.selTypeIds = [];
+  S.selTypes = [];
+  S.scores = [];
+  updMatSt();
+  updateModeUI();
+  updateStep1Guide();
+});
+
+document.getElementById('grade').addEventListener('change', updateStep1Guide);
+document.getElementById('difficulty').addEventListener('change', updateStep1Guide);
+document.getElementById('scope').addEventListener('input', updateStep1Guide);
+document.getElementById('matTxt').addEventListener('input', () => { updMatSt(); updateStep1Guide(); });
+
+// ═══════════════════════════════════════
+// 素材狀態
+// ═══════════════════════════════════════
+function hasMat() {
+  if (document.getElementById('subject').value === '國語') {
+    return Object.values(S.chFiles).some(arr => arr.length > 0);
+  }
+  return S.files.length > 0 || document.getElementById('matTxt').value.trim().length > 0;
+}
+
+function updMatSt() {
+  const el = document.getElementById('matSt');
+  const tx = document.getElementById('matStTx');
+  const subj = document.getElementById('subject').value;
+  if (subj === '國語') {
+    const filled = Object.entries(S.chFiles).filter(([,arr])=>arr.length>0);
+    if (filled.length > 0) {
+      const totalFiles = filled.reduce((a,[,arr])=>a+arr.length,0);
+      const totalChars = filled.reduce((a,[,arr])=>a+arr.reduce((b,f)=>b+f.text.length,0),0);
+      el.className = 'mat-st ok';
+      tx.textContent = `已上傳 ${totalFiles} 個檔案（${filled.length} 個向度），共 ${totalChars.toLocaleString()} 字`;
+    } else {
+      el.className = 'mat-st no';
+      tx.textContent = '尚未提供素材';
+    }
+    return;
+  }
+  const txt = document.getElementById('matTxt').value.trim();
+  const fc = S.files.length;
+  const ft = S.files.reduce((a,f)=>a+f.text.length,0);
+  if (fc>0&&txt.length>0){ el.className='mat-st ok'; tx.textContent=`已上傳 ${fc} 個檔案（${ft.toLocaleString()} 字）+ 貼上文字（${txt.length.toLocaleString()} 字）`; }
+  else if (fc>0){ el.className='mat-st ok'; tx.textContent=`已上傳 ${fc} 個檔案，共 ${ft.toLocaleString()} 字`; }
+  else if (txt.length>0){ el.className='mat-st ok'; tx.textContent=`已貼上 ${txt.length.toLocaleString()} 字`; }
+  else { el.className='mat-st no'; tx.textContent='尚未提供教材'; }
+}
+
+// ═══════════════════════════════════════
+// 導航
+// ═══════════════════════════════════════
+function goStep(n) {
+  [1,2,3,4,5].forEach(i=>document.getElementById('s'+i).classList.add('hide'));
+  document.getElementById('s2ch').classList.add('hide');
+  const el = document.getElementById('s'+n);
+  if (el) el.classList.remove('hide');
+  S.step = n;
+  updSteps();
+  if (n===1) updateStep1Guide();
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+function updSteps() {
+  const stepNum = S.step==='2ch' ? 2 : (typeof S.step==='number' ? S.step : 1);
+  document.querySelectorAll('.stp').forEach(e => {
+    const s = parseInt(e.dataset.s);
+    e.classList.remove('on','ok');
+    if (s===stepNum) e.classList.add('on');
+    else if (s<stepNum) e.classList.add('ok');
+  });
+  document.querySelectorAll('.stp-c').forEach((e,i)=>e.classList.toggle('ok', i+1<stepNum));
+}
+
+// ═══════════════════════════════════════
+// Step 1 → 2
+// ═══════════════════════════════════════
+async function toStep2() {
+  const subj = document.getElementById('subject').value;
+  const grade = document.getElementById('grade').value;
+  const scope = document.getElementById('scope').value.trim() || '依上傳教材';
+  if (!subj||!grade) { alert('請選擇科目和年級'); return; }
+  if (!hasMat()) { alert(subj==='國語'?'請至少上傳一個向度的素材':'請上傳教材或貼上文字'); return; }
+
+  S.subject = subj; S.grade = grade; S.scope = scope;
+  S.difficulty = document.getElementById('difficulty').value;
+  S.matText = document.getElementById('matTxt').value.trim();
+  S.objInput = document.getElementById('objInput') ? document.getElementById('objInput').value.trim() : '';
+
+  // 國語科走獨立流程
+  if (subj === '國語') {
+    S.chScores = {};
+    S.step = '2ch';
+    [1,2,3,4,5].forEach(i=>document.getElementById('s'+i).classList.add('hide'));
+    document.getElementById('s2ch').classList.remove('hide');
+    updSteps();
+    window.scrollTo({ top:0, behavior:'smooth' });
+    renderChZones();
+    return;
+  }
+
+  goStep(2);
+  if (S.objInput) { doManualObjectives(); return; }
+  if (isPublicPromptOnlyMode()) {
+    showPromptOnlyResult('學習目標分析 Prompt', buildAnalysisPrompt(getMaterialText()), {
+      note: '請先複製此 Prompt 至 ChatGPT、Gemini 或 Claude，取得學習目標後回到本頁改用手動輸入學習目標。'
+    });
+    return;
+  }
+  doAnalyze();
+}
+
+// ═══════════════════════════════════════
+// 國語科 Step 2ch 渲染
+// [修改1] ch-zone-header 加入向度小計 span（id="ch-zone-total-{zone.id}"）
+// ═══════════════════════════════════════
+function renderChZones() {
+  const level = getGradeLevel(S.grade);
+  const levelLabel = { low:'低年級（建議）', mid:'中年級（建議）', high:'高年級（建議）' }[level];
+  const filledMat = Object.entries(S.chFiles).filter(([,arr])=>arr.length>0).map(([k])=>k);
+  S.chScores = {};
+  const el = document.getElementById('s2ch-content');
+
+  el.innerHTML = CH_ZONES.map(zone => {
+    const suggested = zone.grades[level];
+    const recItems   = zone.items.filter(it=>it.mat.some(m=>filledMat.includes(m)));
+    const otherItems = zone.items.filter(it=>!it.mat.some(m=>filledMat.includes(m)));
+    return `
+    <div class="ch-zone-section">
+      <div class="ch-zone-header">
+        <span class="ch-zone-badge ${zone.badgeClass}">${zone.label}</span>
+        <span style="font-size:13px;font-weight:700;flex:1;">${zone.label}向度</span>
+        <span style="font-size:12px;color:var(--text-3);margin-right:8px;">${levelLabel} ${suggested} 分</span>
+        <span class="ch-zone-sub" id="ch-zone-total-${zone.id}">0 分</span>
+      </div>
+      <div class="ch-zone-body">
+        ${recItems.length>0
+          ? recItems.map(it=>renderChScoreItem(it,true)).join('')
+          : `<div style="font-size:12px;color:var(--text-3);padding:8px 0;">（未上傳本區素材，如需出題請點下方「顯示其他」手動設定）</div>`}
+        ${otherItems.length>0 ? `
+        <button class="ch-expand-btn" onclick="toggleChOther('${zone.id}',this)">
+          ▶ 顯示其他 ${otherItems.length} 個向度
+        </button>
+        <div id="ch-other-${zone.id}" class="hide">
+          ${otherItems.map(it=>renderChScoreItem(it,false)).join('')}
+        </div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  updChTotal();
+}
+
+// [修改2] renderChScoreItem 的 onchange 傳入 event 參數
+function renderChScoreItem(it, isRec) {
+  return `
+  <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border-light);">
+    <span style="flex:1;font-size:13px;min-width:0;word-break:break-all;">
+      ${escHTML(it.key)}
+      ${isRec?'<span class="rec-badge">推薦</span>':''}
+      <span style="font-size:11px;color:var(--text-3);margin-left:4px;">${escHTML(it.ex)}</span>
+    </span>
+    <input type="number" class="ch-score-input" value="0" min="0" max="100"
+      onchange="updChScore('${escHTML(it.key)}',this.value,this)" placeholder="0"
+      style="width:56px;padding:4px 6px;text-align:center;font-size:13px;border:1.5px solid var(--border);border-radius:4px;flex-shrink:0;">
+    <span style="font-size:12px;color:var(--text-3);width:16px;flex-shrink:0;">分</span>
+  </div>`;
+}
+
+function toggleChOther(zoneId, btn) {
+  const el = document.getElementById('ch-other-'+zoneId);
+  const zone = CH_ZONES.find(z=>z.id===zoneId);
+  const filledMat = Object.entries(S.chFiles).filter(([,arr])=>arr.length>0).map(([k])=>k);
+  const otherCount = zone.items.filter(it=>!it.mat.some(m=>filledMat.includes(m))).length;
+  if (el.classList.contains('hide')) { el.classList.remove('hide'); btn.textContent='▼ 收合'; }
+  else { el.classList.add('hide'); btn.textContent=`▶ 顯示其他 ${otherCount} 個向度`; }
+}
+
+// [修改2] updChScore 接收 ev 參數，不再使用全域 event
+function updChScore(key, val, inp) {
+  const v = parseInt(val)||0;
+  if(v>0) S.chScores[key]=v; else delete S.chScores[key];
+  updChTotal();
+  updChZoneTotals();
+  // 奇數配分提示
+  if(inp){
+    if(v>0 && v%2!==0){
+      inp.style.borderColor='var(--warn)';
+      inp.title='⚠️ 奇數分數可能導致單題出現小數，建議改為偶數';
+    } else {
+      inp.style.borderColor='';
+      inp.title='';
+    }
+  }
+}
+
+// [修改1] updChZoneTotals 現在能正確找到 DOM 元素並顯示小計
+function updChZoneTotals() {
+  CH_ZONES.forEach(zone => {
+    const zoneTotal = zone.items
+      .filter(it => S.chScores[it.key])
+      .reduce((a, it) => a + S.chScores[it.key], 0);
+    const el = document.getElementById('ch-zone-total-' + zone.id);
+    if (el) {
+      el.textContent = zoneTotal + ' 分';
+      const suggested = zone.grades[getGradeLevel(S.grade)];
+      if (zoneTotal === 0) {
+        el.style.color = 'var(--text-3)';
+        el.style.background = 'var(--border-light)';
+      } else if (zoneTotal === suggested) {
+        el.style.color = 'var(--accent)';
+        el.style.background = 'var(--accent-l)';
+      } else if (zoneTotal > suggested) {
+        el.style.color = 'var(--err)';
+        el.style.background = 'var(--err-bg)';
+      } else {
+        el.style.color = 'var(--warn)';
+        el.style.background = 'var(--warn-bg)';
+      }
+    }
+  });
+}
+
+function updChTotal() {
+  const total = Object.values(S.chScores).reduce((a,v)=>a+v,0);
+  const el = document.getElementById('ch-total');
+  if (el) { el.textContent=total+' 分'; el.style.color=total===100?'var(--accent)':'var(--err)'; }
+  const btn = document.getElementById('btn-s2ch-next');
+  if (btn) btn.disabled = total!==100;
+  const diff = Math.abs(100-total);
+  const okText = isBankMode() ? '比重已達 100，可以產出題庫。' : '配分已達 100 分，可以開始出題。';
+  const waitText = isBankMode()
+    ? `目前 ${total}，還${total>100?'超出':'差'} ${diff}。`
+    : `目前 ${total} 分，還${total>100?'超出':'差'} ${diff} 分。`;
+  setNextNote('s2chNextHint', total===100 ? okText : waitText, total===100);
+}
+
+// ═══════════════════════════════════════
+// 手動學習目標
+// ═══════════════════════════════════════
+function doManualObjectives() {
+  const text = S.objInput.trim();
+  if (!text) { alert('學習目標內容為空'); goStep(1); return; }
+  S.objectives=[]; S.totalHours=0;
+  if (text.includes('【單元名稱】')) {
+    text.split(/【單元名稱】/).filter(b=>b.trim()).forEach(block=>{
+      const lines = block.split('\n').map(l=>l.trim()).filter(l=>l);
+      if (!lines.length) return;
+      const unitName = lines[0].replace(/^：|:/,'').trim();
+      let hours=0, start=1;
+      if (lines[1]&&lines[1].includes('【節數】')){ hours=parseInt(lines[1].replace(/[^\d]/g,''))||0; S.totalHours+=hours; start=2; }
+      for (let i=start;i<lines.length;i++){
+        let n=lines[i].replace(/^[-*•\d.、\s]+/,'').replace(/。$/,'').trim();
+        if (n&&!n.includes('節數】')) S.objectives.push({name:n,source:unitName,detail:'',hours,weight:0,checked:true});
+      }
+    });
+  } else {
+    text.split('\n').map(l=>l.replace(/^\d+[\.\、\)\）]\s*/,'').trim()).filter(l=>l).forEach(n=>{
+      S.objectives.push({name:n.replace(/。$/,''),source:'老師輸入',detail:'',hours:0,weight:0,checked:true});
+    });
+  }
+  if (!S.objectives.length){ alert('無法解析學習目標，請確認格式'); goStep(1); return; }
+  const avg=Math.floor(100/S.objectives.length), rem=100-avg*S.objectives.length;
+  S.objectives.forEach((o,i)=>{ o.weight=avg+(i<rem?1:0); });
+  document.getElementById('s2-ld').classList.add('hide');
+  document.getElementById('s2-err').classList.add('hide');
+  document.getElementById('s2-result').classList.remove('hide');
+  document.getElementById('btn-s2next').disabled=false;
+  renderObjectives();
+}
+
+// ═══════════════════════════════════════
+// AI 分析學習目標
+// ═══════════════════════════════════════
+async function doAnalyze() {
+  document.getElementById('s2-ld').classList.remove('hide');
+  document.getElementById('s2-result').classList.add('hide');
+  document.getElementById('s2-err').classList.add('hide');
+  document.getElementById('btn-s2next').disabled=true;
+  try {
+    const mat = getMaterialText();
+    const api = await callAPI(buildAnalysisPrompt(mat),'analyze','flash');
+    const raw = api.text;
+    S._lastRaw=raw;
+    S.objectives=parseObjectives(raw);
+    renderObjectives();
+    document.getElementById('s2-ld').classList.add('hide');
+    document.getElementById('s2-result').classList.remove('hide');
+    document.getElementById('btn-s2next').disabled=false;
+  } catch(err) {
+    document.getElementById('s2-ld').classList.add('hide');
+    document.getElementById('s2-err').classList.remove('hide');
+    let msg=err.message;
+    if (S._lastRaw) msg+='\n\n【AI 原始回傳（前500字）】\n'+S._lastRaw.substring(0,500);
+    document.getElementById('s2-errMsg').textContent=msg;
+  }
+}
+
+function getMaterialText() {
+  let parts=[];
+  S.files.forEach(f=>parts.push(`【檔案：${f.name}】\n${f.text}`));
+  if (S.matText) parts.push(`【貼上文字】\n${S.matText}`);
+  return parts.join('\n\n');
+}
+
+function buildAnalysisPrompt(material) {
+  return `你是一位資深國小課程分析專家，任務是把教材轉成「可命題、可配分」的學習目標。
+請全程使用繁體中文，且只輸出 JSON，不要使用 Markdown，不要加說明文字。
+
+【教材資訊】科目：${S.subject} / 年級：${S.grade} / 範圍：${S.scope}
+
+【教材內容】
+${material}
+
+【先做教材比對】
+請先判斷教材是否與「科目、年級」大致相符。
+若明顯不符，只能回傳：
+{"error":"教材內容與設定不符：[用 30 字內具體說明]"}
+若大致相符或無法確定，繼續分析。
+
+【學習目標擷取規則】
+1. 優先擷取教材中明示的「學習目標、教學目標、能力指標、我能、能夠、學會、認識」等句子。
+2. 若教材已有明示目標，name 必須盡量保留原句，不要自行擴寫、合併或改成空泛口號。
+3. 若教材沒有明示目標，才依教材重點歸納 3-6 個可評量目標，detail 必須標註「AI 歸納」。
+4. name 要是可被題目評量的行為，例如「能辨識...」「能說明...」「能應用...」，不要只寫章節標題或名詞。
+5. source 優先填單元、頁碼、段落標題或「老師輸入」；找不到時填「教材內容」。
+6. detail 限 50 字內，說明依據或命題焦點，不要寫冗長解析。
+
+【輸出格式要求】
+1. 只能輸出一個合法 JSON object。
+2. 不可輸出 \`\`\`json、註解、前言或結語。
+3. total_hours 請估算為正整數；無法判斷時填 1。
+4. 每個 hours 與 weight 都必須是正整數，所有 weight 加總必須恰好等於 100，禁止小數。
+5. 目標數建議 3-6 個；若教材很短，至少 2 個。
+6. 輸出結構如下：
+{"total_hours":預估總授課節數,"objectives":[{"name":"目標名稱","source":"來源","detail":"依據說明50字內","hours":節數,"weight":比重}]}
+`;
+}
+
+function parseObjectives(raw) {
+  try {
+    let clean=raw.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim();
+    const jm=clean.match(/\{[\s\S]*"objectives"[\s\S]*\}/);
+    if (jm) clean=jm[0];
+    let data;
+    try { data=JSON.parse(clean); }
+    catch(_) {
+      const m=clean.match(/"objectives"\s*:\s*\[/);
+      if (m) {
+        const after=clean.substring(clean.indexOf(m[0])+m[0].length);
+        const items=[]; let depth=0,start=-1;
+        for(let i=0;i<after.length;i++){
+          if(after[i]==='{'){if(depth===0)start=i;depth++;}
+          else if(after[i]==='}'){depth--;if(depth===0&&start>=0){items.push(after.substring(start,i+1));start=-1;}}
+        }
+        if(items.length>0){const hm=clean.match(/"total_hours"\s*:\s*(\d+)/);data=JSON.parse('{"total_hours":'+(hm?hm[1]:0)+',"objectives":['+items.join(',')+']}')}
+        else throw new Error('無法修復截斷的 JSON');
+      } else throw new Error('找不到 objectives 陣列');
+    }
+    if(data.error) throw new Error(data.error);
+    S.totalHours=data.total_hours||0;
+    return (data.objectives||[]).map(o=>({name:o.name,source:o.source||'',detail:o.detail,hours:o.hours,weight:o.weight,checked:true}));
+  } catch(e) {
+    if(e.message&&e.message.startsWith('教材內容與設定不符')) throw e;
+    throw new Error('AI 回傳格式異常，請重試');
+  }
+}
+
+function renderObjectives() {
+  document.getElementById('s2-summary').textContent=`本範圍預估總授課 ${S.totalHours} 節，包含 ${S.objectives.length} 個學習目標：`;
+  document.getElementById('objList').innerHTML=S.objectives.map((o,i)=>`
+    <div class="obj-card${o.checked?'':' unchecked'}" id="obj-${i}">
+      <div class="obj-top">
+        <div class="obj-chk${o.checked?' on':''}" onclick="togObj(${i})">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <span class="obj-name">${escHTML(o.name)}</span>
+        <div class="obj-weight"><input type="number" value="${o.weight}" min="0" max="100" onchange="updObjW(${i},this.value)"><span>%</span></div>
+      </div>
+      <div class="obj-detail">${o.source&&o.source!=='老師輸入'?`<span style="display:inline-block;background:var(--accent-l);color:var(--accent-h);font-size:11px;padding:2px 6px;border-radius:4px;margin-right:6px;">單元：${escHTML(o.source)}</span>`:''}${o.hours>0?o.hours+' 節 ｜ ':''}${escHTML(o.detail)}</div>
+    </div>`).join('');
+  updObjTotal();
+}
+
+function togObj(i){
+  S.objectives[i].checked=!S.objectives[i].checked;
+  const card=document.getElementById('obj-'+i);
+  card.classList.toggle('unchecked');
+  card.querySelector('.obj-chk').classList.toggle('on');
+  card.querySelector('.obj-weight input').disabled=!S.objectives[i].checked;
+  updObjTotal();
+}
+function updObjW(i,v){ S.objectives[i].weight=parseInt(v)||0; updObjTotal(); }
+function updObjTotal(){
+  const total=S.objectives.filter(o=>o.checked).reduce((a,o)=>a+o.weight,0);
+  const el=document.getElementById('objTotal');
+  el.textContent=total+'%'; el.classList.toggle('err',total!==100);
+  document.getElementById('btn-s2next').disabled=total!==100;
+  setNextNote('s2NextHint', total===100 ? '比重已達 100%，可以進入題型選擇。' : `目前 ${total}%，請調整到 100% 才能下一步。`, total===100);
+}
+
+// ═══════════════════════════════════════
+// Step 2 → 3
+// ═══════════════════════════════════════
+function toStep3(){
+  const total=S.objectives.filter(o=>o.checked).reduce((a,o)=>a+o.weight,0);
+  if(total!==100){ alert('學習目標比重合計需等於 100%'); return; }
+  const recs=SUBJ_QT[S.subject]||[];
+  const all=[...BASE_QT,...recs.map(r=>({...r,rec:true}))];
+  document.getElementById('qtGrid').innerHTML=all.map(t=>`
+    <div class="qti" data-id="${t.id}" onclick="togQt(this)">
+      <input type="checkbox" value="${t.id}" style="display:none">
+      <span class="qti-c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+      <span class="qti-info">
+        <span class="qti-name">${escHTML(t.name)}${t.rec?'<span class="qti-badge">推薦</span>':''}</span>
+        <span class="qti-desc">${escHTML(t.desc)}</span>
+      </span>
+    </div>`).join('');
+  if(S.selTypeIds&&S.selTypeIds.length>0){
+    S.selTypeIds.forEach(id=>{ const e=document.querySelector(`#qtGrid [data-id="${id}"]`); if(e){e.classList.add('on');e.querySelector('input').checked=true;} });
+  } else {
+    document.querySelectorAll('#qtGrid [data-id="MC"],[data-id="TF"]').forEach(e=>{e.classList.add('on');e.querySelector('input').checked=true;});
+  }
+  document.getElementById('s3-info').textContent=`${S.grade}${S.subject}科「${S.scope}」`;
+  goStep(3);
+  updateQTypeGuide();
+}
+
+function togQt(el){
+  el.classList.toggle('on');
+  el.querySelector('input').checked=el.classList.contains('on');
+  updateQTypeGuide();
+}
+
+function updateQTypeGuide(){
+  const count=document.querySelectorAll('#qtGrid .qti.on').length;
+  setNextNote('s3NextHint', count>0 ? `已選 ${count} 種題型，可以進入配分設定。` : '請至少選擇一種題型。', count>0);
+}
+
+// ═══════════════════════════════════════
+// Step 3 → 4
+// ═══════════════════════════════════════
+function toStep4(){
+  const checked=document.querySelectorAll('#qtGrid .qti.on');
+  if(!checked.length){ alert('請至少選擇一種題型'); return; }
+  S.selTypeIds=Array.from(checked).map(e=>e.dataset.id);
+  const all=[...BASE_QT,...(SUBJ_QT[S.subject]||[])];
+  const map=Object.fromEntries(all.map(t=>[t.id,t]));
+  S.selTypes=Array.from(checked).map(e=>map[e.dataset.id]);
+  renderScTable(); updSc(); goStep(4);
+}
+
+function renderScTable(){
+  const ord=['一','二','三','四','五','六','七','八','九','十'];
+  const bank=isBankMode();
+  document.getElementById('scHead').innerHTML=bank
+    ? '<tr><th style="width:50px">順序</th><th>題型</th><th style="width:90px">產出題數</th><th style="text-align:right">小計</th></tr>'
+    : '<tr><th style="width:50px">順序</th><th>大題</th><th style="width:70px">題數</th><th style="width:70px">每題</th><th style="width:70px;text-align:right">小計</th></tr>';
+  document.getElementById('scBody').innerHTML=S.selTypes.map((t,i)=>{
+    const sc=S.scores[i]||{};
+    const count=sc.count||(bank?Math.max(t.dc*2,4):t.dc);
+    const each=sc.each||t.de;
+    return bank ? `
+    <tr>
+      <td><div class="sc-ord">
+        <button onclick="moveType(${i},-1)" ${i===0?'disabled':''}>▲</button>
+        <button onclick="moveType(${i},1)" ${i===S.selTypes.length-1?'disabled':''}>▼</button>
+      </div></td>
+      <td>${ord[i]||i+1}、${escHTML(t.name)}<div style="font-size:12px;color:var(--text-3);line-height:1.5;">${escHTML(t.desc)}</div></td>
+      <td><input type="number" value="${count}" min="1" max="30" onchange="updSc()"></td>
+      <td style="text-align:right;font-weight:600" class="sub">${count} 題</td>
+    </tr>` : `
+    <tr>
+      <td><div class="sc-ord">
+        <button onclick="moveType(${i},-1)" ${i===0?'disabled':''}>▲</button>
+        <button onclick="moveType(${i},1)" ${i===S.selTypes.length-1?'disabled':''}>▼</button>
+      </div></td>
+      <td>${ord[i]||i+1}、${escHTML(t.name)}</td>
+      <td><input type="number" value="${count}" min="1" max="30" onchange="updSc()"></td>
+      <td><input type="number" value="${each}" min="1" max="50" onchange="updSc()"></td>
+      <td style="text-align:right;font-weight:600" class="sub">${count*each}</td>
+    </tr>`;
+  }).join('');
+}
+
+function moveType(idx,dir){
+  const ni=idx+dir; if(ni<0||ni>=S.selTypes.length) return;
+  updSc();
+  [S.selTypes[idx],S.selTypes[ni]]=[S.selTypes[ni],S.selTypes[idx]];
+  [S.scores[idx],S.scores[ni]]=[S.scores[ni],S.scores[idx]];
+  renderScTable();
+  updSc();
+}
+
+function updSc(){
+  let total=0; S.scores=[];
+  if(isBankMode()){
+    document.querySelectorAll('#scBody tr').forEach((row,i)=>{
+      const input=row.querySelector('input');
+      const c=parseInt(input.value)||0;
+      row.querySelector('.sub').textContent=c+' 題';
+      total+=c;
+      S.scores.push({name:S.selTypes[i].name,id:S.selTypes[i].id,count:c,each:0,subtotal:c});
+    });
+    const el=document.getElementById('scTotal');
+    el.textContent=`題庫合計：${total} 題`;
+    el.classList.toggle('err',total<=0);
+    document.getElementById('btnGen').disabled=total<=0;
+    setNextNote('s4NextHint', total>0 ? `將產出 ${total} 題題庫題目，老師可再挑選排版。` : '請至少設定 1 題題庫題目。', total>0);
+    return;
+  }
+  document.querySelectorAll('#scBody tr').forEach((row,i)=>{
+    const ins=row.querySelectorAll('input');
+    const c=parseInt(ins[0].value)||0,e=parseInt(ins[1].value)||0,sub=c*e;
+    row.querySelector('.sub').textContent=sub; total+=sub;
+    S.scores.push({name:S.selTypes[i].name,id:S.selTypes[i].id,count:c,each:e,subtotal:sub});
+  });
+  const el=document.getElementById('scTotal');
+  if(total===100){el.textContent='合計：100 分 ✓';el.classList.remove('err');}
+  else{el.textContent=`合計：${total} 分（${total>100?'超出':'不足'} ${Math.abs(total-100)} 分）`;el.classList.add('err');}
+  document.getElementById('btnGen').disabled=total!==100;
+  setNextNote('s4NextHint', total===100 ? '配分已完成，按「開始出題」即可產生考卷。' : `請再調整配分：目前${total>100?'超出':'不足'} ${Math.abs(total-100)} 分。`, total===100);
+}
+
+// ═══════════════════════════════════════
+// Step 4 → 5：一般科目出題
+// [修改4] 加入計時器
+// ═══════════════════════════════════════
+var _genTimerInterval = null;
+
+function startGenTimer() {
+  const el = document.getElementById('s5-timer');
+  if (!el) return;
+  let sec = 0;
+  el.textContent = '已等待 0 秒';
+  _genTimerInterval = setInterval(() => {
+    sec++;
+    el.textContent = `已等待 ${sec} 秒`;
+  }, 1000);
+}
+
+function stopGenTimer() {
+  if (_genTimerInterval) { clearInterval(_genTimerInterval); _genTimerInterval = null; }
+  const el = document.getElementById('s5-timer');
+  if (el) el.textContent = '';
+}
+
+function buildPromptOnlyOutput(title,prompt,options={}){
+  const note=options.note||'請複製下方 Prompt 至 ChatGPT、Gemini 或 Claude 使用。AI 產出內容須由教師審查、修正後使用。';
+  return `# ${title}
+
+## 公開安全版說明
+
+- 公開安全版不直接呼叫 AI 後端。
+- 本頁不內建後端網址，也不傳送密碼、金鑰或權杖。
+- ${note}
+- 本系統為個人維護之教師輔助工具，不代表學校官方題庫、官方採用或正式學力檢測標準。
+- AI 產出內容僅供教師備課與命題參考，正式使用前仍須由教師自行審查、修正與判斷。
+
+## Prompt
+
+\`\`\`text
+${prompt}
+\`\`\`
+`;
+}
+
+function showPromptOnlyResult(title,prompt,options={}){
+  goStep(5);
+  const loading=document.getElementById('s5-ld');
+  const ok=document.getElementById('s5-ok');
+  const err=document.getElementById('s5-err');
+  if(loading) loading.classList.add('hide');
+  if(ok) ok.classList.remove('hide');
+  if(err) err.classList.add('hide');
+  clearRunMeta();
+  S.output=buildPromptOnlyOutput(title,prompt,options);
+  renderOutput(S.output);
+  updateModeUI();
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+function buildCurrentPromptOnlyDraft(){
+  return isBankMode()
+    ? buildActiveBankPrompt(S.scores,true)
+    : buildExamPrompt(S.scores,true,{compact:false,includeOutline:true});
+}
+
+async function generate(){
+  if(isPublicPromptOnlyMode()){
+    const title=isCompetencyAssessmentMode()
+      ? '學力檢測（能力導向）題庫 Prompt 草稿'
+      : (isBankMode()?'一般題庫 Prompt 草稿':'正式考卷 Prompt 草稿');
+    showPromptOnlyResult(title, buildCurrentPromptOnlyDraft());
+    return;
+  }
+  goStep(5);
+  document.getElementById('s5-ld').classList.remove('hide');
+  document.getElementById('s5-ok').classList.add('hide');
+  document.getElementById('s5-err').classList.add('hide');
+  clearRunMeta();
+  const runStartedAt=Date.now();
+  startGenTimer(); // [修改4]
+  const hints=['正在分析教材與學習目標...','正在規劃題型分布與難度...','正在撰寫題目與選項...','正在檢查誘答力與品質...','即將完成，請稍候...'];
+  let hi=0;
+  const ht=setInterval(()=>{ hi=Math.min(hi+1,hints.length-1); const s=document.getElementById('s5-ldSub'); if(s) s.textContent=hints[hi]; },8000);
+  try {
+    const proTypes=['RG','SCENARIO','EXP','DIALOG','READ','MC_PRO','SCIREAD'];
+    const flashSc=[],proSc=[];
+    const ord=['一','二','三','四','五','六','七','八','九','十'];
+    S.scores.forEach((s,idx)=>{
+      const item={...s,ordName:ord[idx]||(idx+1).toString()};
+      if(proTypes.includes(s.id)) proSc.push(item); else flashSc.push(item);
+    });
+    let out='', metas=[];
+    if(flashSc.length>0&&proSc.length>0){
+      document.getElementById('s5-ldMsg').textContent='AI 雙引擎同步運算中...';
+      document.getElementById('s5-ldSub').textContent=isBankMode()?'Flash / Pro 分工產出題庫':'Flash 處理基礎題，Pro 深度運算素養題';
+      const [ft,pt]=await Promise.all([
+        callAPI(isBankMode()?buildActiveBankPrompt(flashSc,true):buildExamPrompt(flashSc,true,{compact:true,includeOutline:false}),'generate','flash'),
+        callAPI(isBankMode()?buildActiveBankPrompt(proSc,false):buildExamPrompt(proSc,false,{compact:true,includeOutline:false}),'generate','pro')
+      ]);
+      out=isBankMode()?mergeBank(ft.text,pt.text):mergeExam(ft.text,pt.text);
+      metas=[ft.meta,pt.meta];
+    } else if(proSc.length>0){
+      document.getElementById('s5-ldMsg').textContent=isBankMode()?'啟動高階引擎：Pro 產出題庫...':'啟動高階引擎：Pro 深度運算中...';
+      const api=await callAPI(isBankMode()?buildActiveBankPrompt(proSc,true):buildExamPrompt(proSc,true),'generate','pro');
+      out=api.text; metas=[api.meta];
+    } else {
+      document.getElementById('s5-ldMsg').textContent=isBankMode()?'啟動極速引擎：Flash 產出題庫...':'啟動極速引擎：Flash 產出考卷...';
+      const api=await callAPI(isBankMode()?buildActiveBankPrompt(flashSc,true):buildExamPrompt(flashSc,true,{compact:true,includeOutline:true}),'generate','flash');
+      out=api.text; metas=[api.meta];
+    }
+    clearInterval(ht); stopGenTimer(); // [修改4]
+    S.output=out;
+    renderOutput(out.split(/═══ 國語科雙向細目表對應 ═══/)[0].trim());
+    renderRunMeta(metas,Date.now()-runStartedAt);
+    document.getElementById('s5-ld').classList.add('hide');
+    document.getElementById('s5-ok').classList.remove('hide');
+  } catch(err){
+    clearInterval(ht); stopGenTimer();
+    document.getElementById('s5-ld').classList.add('hide');
+    document.getElementById('s5-err').classList.remove('hide');
+    document.getElementById('s5-errMsg').textContent='出題失敗：'+err.message;
+  }
+}
+
+function buildActiveBankPrompt(targetScores,isMain){
+  return isCompetencyAssessmentMode()
+    ? buildCompetencyBankPrompt(targetScores,isMain)
+    : buildBankPrompt(targetScores,isMain);
+}
+
+function buildActiveChineseBankPrompt(){
+  return isCompetencyAssessmentMode()
+    ? buildChineseCompetencyBankPrompt()
+    : buildChineseBankPrompt();
+}
+
+// ═══════════════════════════════════════
+// 國語科出題
+// [修改4] 國語科也加計時器
+// ═══════════════════════════════════════
+async function toStep5Ch(){
+  const total=Object.values(S.chScores).reduce((a,v)=>a+v,0);
+  if(total!==100){ alert(isBankMode()?'題庫向度比重需等於 100':'配分合計需等於 100 分'); return; }
+  if(isPublicPromptOnlyMode()){
+    const title=isCompetencyAssessmentMode()
+      ? '國語學力檢測（能力導向）題庫 Prompt 草稿'
+      : (isBankMode()?'國語題庫 Prompt 草稿':'國語正式考卷 Prompt 草稿');
+    showPromptOnlyResult(title, isBankMode()?buildActiveChineseBankPrompt():buildChineseExamPrompt());
+    return;
+  }
+  goStep(5);
+  document.getElementById('s5-ld').classList.remove('hide');
+  document.getElementById('s5-ok').classList.add('hide');
+  document.getElementById('s5-err').classList.add('hide');
+  clearRunMeta();
+  const runStartedAt=Date.now();
+  document.getElementById('s5-ldMsg').textContent=isBankMode()?'AI 正在依國語向度產出題庫中...':'AI 正在依審核表評量架構命題中...';
+  document.getElementById('s5-ldSub').textContent=isBankMode()?'國語科題庫依向度比重產生，通常需要 30-60 秒':'國語科採整合式出題，通常需要 30-60 秒';
+  startGenTimer(); // [修改4]
+  try {
+    const api=await callAPI(isBankMode()?buildActiveChineseBankPrompt():buildChineseExamPrompt(),'generate','pro');
+    const result=api.text;
+    stopGenTimer(); // [修改4]
+    S.output=result;
+    renderOutput(result.split(/═══ 國語科雙向細目表對應 ═══/)[0].trim());
+    renderRunMeta([api.meta],Date.now()-runStartedAt);
+    document.getElementById('s5-ld').classList.add('hide');
+    document.getElementById('s5-ok').classList.remove('hide');
+  } catch(err){
+    stopGenTimer();
+    document.getElementById('s5-ld').classList.add('hide');
+    document.getElementById('s5-err').classList.remove('hide');
+    document.getElementById('s5-errMsg').textContent='出題失敗：'+err.message;
+  }
+}
+
+function buildChineseExamPrompt(){
+  const level=getGradeLevel(S.grade);
+  const levelLabel={low:'低年級',mid:'中年級',high:'高年級'}[level];
+  const zoneScore={word:0,sent:0,para:0};
+  const scoredItems=[];
+  Object.entries(S.chScores).forEach(([key,val])=>{
+    if(val<=0) return;
+    scoredItems.push(`${key}：${val} 分`);
+    CH_ZONES.forEach(z=>{ if(z.items.find(it=>it.key===key)) zoneScore[z.id]=(zoneScore[z.id]||0)+val; });
+  });
+  const mat=S.chMat||{};
+  const matParts=[];
+  if(mat.text) matParts.push(`【01 課文】\n${mat.text}`);
+  if(mat.word) matParts.push(`【05形音／06字義／07成語】\n${mat.word}`);
+  if(mat.sent) matParts.push(`【08句型／10修辭／11修辭總表】\n${mat.sent}`);
+  if(mat.para) matParts.push(`【12大意／13結構表／15閱讀理解】\n${mat.para}`);
+  const d=DIFF[S.difficulty];
+  // 動態計算台灣學年度（8月為新學年度分界）
+  const today = new Date();
+  const rocYear = today.getFullYear() - 1911 - (today.getMonth() < 7 ? 1 : 0);
+  return `你是一位具備教育心理學背景的國小國語科首席命題專家。你的命題哲學是：課文只是媒介，能力才是地基。
+請以「許育健教授國語科評量向度」作為試卷骨架，並以素材彈藥庫作為命題內容來源。
+【輸出硬性限制】
+1. 絕對禁止輸出任何開場白（如「好的」「收到」）、結尾語、思考過程或未指定區塊。
+2. 每一題都要能對應到本次選定向度與素材，不可泛泛命題。
+3. 題數與配分必須合計 100 分；若微調題數或每題分數，必須在正式試題前用一行說明。
+
+【基本資訊】
+學校：內湖國小 ／ 科目：國語 ／ 年級：${S.grade}（${levelLabel}）／ 範圍：${S.scope}
+難度：${d.label}（基礎 ${d.basic}%／中階 ${d.mid}%／進階 ${d.adv}%）
+
+【三向度配分規格】
+字詞短語區：${zoneScore.word||0} 分 ／ 句式語法區：${zoneScore.sent||0} 分 ／ 段篇讀寫區：${zoneScore.para||0} 分 ／ 總分：100 分
+
+【本次命題向度與配分】
+${scoredItems.join('\n')}
+
+【命題鐵則】（違反將導致試卷作廢）
+1. 基礎題緊扣素材：字音字形、字詞釋義必須從【05/06/07】素材中挑選，確保有誘答力。
+2. 句型與素養題強制換殼：使用【08/11】句型與【12/13】結構出題時，絕對禁止出現教材人名或課文原句！必須創作「全新的校園或生活情境」測驗學生能否將知識遷移應用。
+3. 指標絕對吻合：標註的對應向度必須與題目真實測驗內容 100% 吻合，禁止張冠李戴。
+4. 選擇題嚴格遵守三行式排版：
+   第一行：題幹
+   第二行：(A) 選項一  (B) 選項二  (C) 選項三  (D) 選項四
+   第三行：[對應向度：向度名稱]
+5. 跨題不得洩漏：同一份試卷中，任何題目的題幹或選項不得暗示其他題目的答案。
+6. 題型規範（違反視為命題失敗）：
+   - 全卷選擇題不得超過總分的 40%
+   - 字詞短語區：必須包含「注音填寫」與「國字書寫」各至少一題，可加入詞語填空或成語填寫。注音填寫題一律使用注音符號（ㄅㄆㄇ），禁止使用漢語拼音或羅馬拼音。
+   - 句式語法區：必須包含「造句」或「句型改寫」至少一種，修辭若有配分須含仿寫而非只有辨識
+   - 段篇讀寫區：必須包含「簡答題」，若段篇配分超過 30 分須加入「引導寫作」或「結構填空」
+   - 手寫大題每題須標明「評分標準」與「參考答案」
+7. 分數規範：每題分數必須為整數，不得出現小數點。若向度配分無法整除預計題數，請自動微調題數或每題分數使其整除，並在試卷中標註調整說明。
+8. 完成輸出前請自行檢查：題目是否符合年級、是否有唯一答案、答案卷是否完整、是否跨題洩漏；不要輸出檢查過程。
+
+【素材彈藥庫】
+${matParts.join('\n\n')}
+
+【輸出格式】請嚴格依照以下結構輸出，不可遺漏分隔線：
+
+=== 正式試題 ===
+內湖國小 ${rocYear} 學年度第___學期 定期評量 國語科試卷
+${S.grade}___班 座號：_______ 姓名：_______
+
+（依字詞短語→句式語法→段篇讀寫順序出題）
+每題後方至少標註：[配分：__ 分] [對應向度：向度名稱]；手寫題需附評分標準。
+
+═══ 答案卷 ═══
+（列出所有答案與評分標準）
+
+═══ 學習目標對應統計 ═══
+請用審題表摘要格式列出：
+【評量向度｜評量項目｜對應題號｜佔分｜小計】
+並補上命題者自評提醒：
+- 扣緊國語科評量向度與配分比例：是／需調整
+- 未直接使用教科書廠商試題：是／需調整
+- 預估應試時間 40-60 分鐘：是／需調整
+- 內容符合學生能力與真實情境：是／需調整
+- 遵守迴避與保密原則：是
+
+═══ 防洩漏自檢報告 ═══
+（檢查是否有題幹洩漏答案）
+
+═══ 國語科雙向細目表對應 ═══
+請將所有題目配分對應許育健教授評量項目，輸出嚴格 JSON 格式。
+只能使用以下 key 值：正確字音、近字音、多字音、變字音、確認字形、筆畫筆順、分辨部首、部件組合、造字原則、字詞釋義、近義字詞、反義字詞、類詞應用、句意理解、文句組成、句型辨識、句式變化、標點符號、句群關係、四字詞語、結構詞語、常用修辭、提取訊息、推論訊息、整合詮釋、比較評估、摘要整合、推估主旨、文體應用、語文工具、句子變化、看圖寫作、限制習寫
+\`\`\`json
+{
+  "向度名稱": 配分數字
+}
+\`\`\``;
+}
+
+function buildChineseBankPrompt(){
+  const level=getGradeLevel(S.grade);
+  const levelLabel={low:'低年級',mid:'中年級',high:'高年級'}[level];
+  const zoneScore={word:0,sent:0,para:0};
+  const scoredItems=[];
+  Object.entries(S.chScores).forEach(([key,val])=>{
+    if(val<=0) return;
+    scoredItems.push(`${key}：${val}`);
+    CH_ZONES.forEach(z=>{ if(z.items.find(it=>it.key===key)) zoneScore[z.id]=(zoneScore[z.id]||0)+val; });
+  });
+  const mat=S.chMat||{};
+  const matParts=[];
+  if(mat.text) matParts.push(`【01 課文】\n${mat.text}`);
+  if(mat.word) matParts.push(`【05形音／06字義／07成語】\n${mat.word}`);
+  if(mat.sent) matParts.push(`【08句型／10修辭／11修辭總表】\n${mat.sent}`);
+  if(mat.para) matParts.push(`【12大意／13結構表／15閱讀理解】\n${mat.para}`);
+  const d=DIFF[S.difficulty];
+  return `你是一位具備教育心理學背景的國小國語科命題教師。請依「許育健教授國語科評量向度」與素材彈藥庫，產出可供教師挑選的國語科題庫，不是正式考卷。
+【輸出硬性限制】
+1. 不要輸出班級、座號、姓名、完整試卷封面，也不要要求總分 100 分。
+2. 題庫題目必須依本次選定向度與比重產出；每題都要能獨立使用，不能依賴前後題。
+3. 題庫供老師挑題後組卷，所以每題須標註建議配分、對應向度、建議難度與挑題理由。
+4. 請嚴格只輸出指定區塊，不要加開場白、結尾語或思考過程。
+
+【基本資訊】
+科目：國語 ／ 年級：${S.grade}（${levelLabel}）／ 範圍：${S.scope}
+難度配置：${d.label}（基礎 ${d.basic}%／中階 ${d.mid}%／進階 ${d.adv}%）
+
+【三向度題庫覆蓋比重】
+字詞短語區：${zoneScore.word||0} ／ 句式語法區：${zoneScore.sent||0} ／ 段篇讀寫區：${zoneScore.para||0} ／ 合計：100
+
+【本次題庫向度與比重】
+${scoredItems.join('\n')}
+
+【命題規則】
+1. 字詞短語題可緊扣素材，但不可直接洩漏答案；字音字形、字詞釋義必須從【05/06/07】素材中選取。
+2. 句式語法與段篇讀寫題要能測能力遷移；使用課文概念時，請改寫成新的校園或生活情境。
+3. 同一向度內要有可挑選性：不同難度、不同測驗焦點、不同題型，不要只換字重複。
+4. 選擇題必須只有一個最佳答案，禁止「以上皆是」「以上皆非」「無法判斷」。
+5. 手寫題、造句題、簡答題需在答案索引提供參考答案與評分標準。
+6. 題庫內不得跨題洩漏答案。
+7. 不要輸出圖片生成指令；配圖可由結果頁另一個按鈕事後產生。
+8. 不得加入文本沒有提供、也無法合理推論的資訊。
+9. 每題應標示答案依據；若答案依據不足，AI 初步檢核須標示「建議教師確認」。
+10. AI 初步檢核只能使用保守語句，不得使用「通過」作為最終判斷。
+
+【素材彈藥庫】
+${matParts.join('\n\n')}
+
+【輸出格式】請嚴格依照以下 Markdown 結構輸出，不可遺漏任何 # 區塊；不要要求整份輸出為 JSON：
+
+# 題庫總覽
+- 使用方式：本題庫供教師挑題、調整順序與排版，尚非正式考卷。
+- 重要提醒：AI 產出內容僅供教師備課與命題參考，正式使用前仍須由教師自行審查題目、答案、解析、年級適切性與教材範圍。
+- 題庫題號請全卷連續編號，不要在不同向度重新從 Q1 開始。
+- 請摘要列出：科目、年級、範圍、難度配置、題庫總題數、涵蓋向度、主要閱讀能力。
+
+# 學習目標對照表
+請用 Markdown 表格輸出，欄位固定為：
+| learning_goal_id | 學習目標／評量向度 | 題號 | 題數 | 難度分布 | 題型分布 | 教師審核摘要 |
+|---|---|---|---:|---|---|---|
+
+# 題目清單
+每一道題目請使用下列格式，並至少包含所有欄位：
+
+## Q1
+- 題號：Q1
+- 科目：國語
+- 年級：${S.grade}
+- 單元或教材範圍：${S.scope}
+- 學習目標代碼：LG-CH-__
+- 學習目標：對應向度或評量項目
+- 能力標籤：例如 詞義理解、句意理解、段落大意
+- 文本類型：課文／短文／對話／語句／段落／其他
+- 閱讀能力：擷取訊息／詞義理解／句意理解／段落大意／篇章主旨／推論／寫法判斷／文本證據判讀
+- 題型：選擇題／填充題／簡答題／造句題／其他
+- 難度：基礎／中階／進階
+- 認知層次：記憶／理解／應用／推論／分析
+- 題目：題目內容
+- 選項：若適用，列出 (A)(B)(C)(D)
+- 答案：正答或參考答案
+- 解析：必要解析或評分標準
+- 答案依據：說明答案來自哪段素材或哪個語句
+- 證據句或段落：引用或摘要可支持答案的句子／段落；若無明確依據請寫「依據不足，建議教師確認」
+- 是否超出文本可推論範圍：否／可能，建議教師確認
+- AI 初步檢核：只能使用保守語句，例如「AI 初步檢核：未見明顯問題，仍待教師複核」「AI 初步檢核：建議教師確認答案唯一性」「AI 初步檢核：可能需確認是否超出教材範圍」「AI 初步檢核：建議調整題幹文字」「AI 初步檢核：建議確認難度是否符合年級」
+- 教師審核狀態：未審（可改為：未審／可用／需修／棄用）
+- 教師備註：
+
+# 答案與解析
+請用 Markdown 表格列出每題答案、答案依據、必要解析與評分標準。選擇題需列正答，非選擇題需列參考答案與評分標準。
+
+# 教師快速檢核表
+請用 Markdown 表格輸出，欄位固定為：
+| 題號 | 是否對應學習目標 | 是否符合年級程度 | 是否符合教材範圍 | 答案是否唯一 | 解析是否合理 | 題幹是否清楚 | 是否適合正式使用 | 教師審核狀態 | 教師備註 |
+|---|---|---|---|---|---|---|---|---|---|
+提醒：AI 只提供初步檢核，不替教師做最終判斷。
+
+# 挑題與組卷建議
+給老師 3-5 點建議，例如可挑幾題字詞短語、幾題句式語法、幾題段篇讀寫，如何組成正式考卷；請提醒挑題後仍需核對審題表的向度配分與應試時間。
+
+# AI 初步風險提醒
+請檢查題庫內是否有跨題洩漏答案、答案依據不足、超出文本可推論範圍、題型過度集中、難度不符年級或選項有爭議。若無明顯問題，請寫「AI 初步檢核：未見明顯問題，仍待教師複核」。
+
+═══ 國語科雙向細目表對應 ═══
+請將題庫題目建議配分對應許育健教授評量項目，輸出嚴格 JSON 格式。
+\`\`\`json
+{
+  "向度名稱": 建議配分數字
+}
+\`\`\``;
+}
+
+function buildChineseCompetencyBankPrompt(){
+  const level=getGradeLevel(S.grade);
+  const levelLabel={low:'低年級',mid:'中年級',high:'高年級'}[level];
+  const scoredItems=[];
+  Object.entries(S.chScores).forEach(([key,val])=>{ if(val>0) scoredItems.push(`${key}：${val}`); });
+  const mat=S.chMat||{};
+  const matParts=[];
+  if(mat.text) matParts.push(`【01 課文】\n${mat.text}`);
+  if(mat.word) matParts.push(`【05形音／06字義／07成語】\n${mat.word}`);
+  if(mat.sent) matParts.push(`【08句型／10修辭／11修辭總表】\n${mat.sent}`);
+  if(mat.para) matParts.push(`【12大意／13結構表／15閱讀理解】\n${mat.para}`);
+  const d=DIFF[S.difficulty];
+  return `你是一位國小國語科能力導向命題教師。請依素材產出「學力檢測（能力導向）模式」題庫草稿，不是正式考卷，也不是官方或縣市學力檢測題庫。
+
+【模式定位】
+本模式參考學力檢測常見題型精神，協助產生能力導向試題草稿；AI 產出內容仍須由教師審查、修正後使用。
+請避免宣稱題目已通過正式審核、可直接正式使用、答案保證完全正確、符合官方學力檢測標準，或屬於官方／縣市學力檢測題庫。
+
+【基本資訊】
+科目：國語 ／ 年級：${S.grade}（${levelLabel}）／ 範圍：${S.scope}
+難度配置：${d.label}（基礎 ${d.basic}%／中階 ${d.mid}%／進階 ${d.adv}%）
+
+【本次向度與比重】
+${scoredItems.join('\n')}
+
+【能力導向方向】
+國語文題目請以閱讀理解為核心，不以單純字詞背誦為主。素材可使用故事、說明文、公告、對話、短文或圖表文字。每題需標示閱讀能力：擷取訊息、詞義理解、句意理解、段落大意、篇章主旨、推論、寫法判斷或文本證據判讀。
+每題應提供答案依據，例如依據句子、依據段落或依據文本線索。作答或解析應標示文本中的證據句或段落，不要求學生憑空推測，並說明推論界線。不得要求學生根據文本以外、無法合理推論的資訊作答；依據不足時請在 AI 初步檢核中提醒「建議教師確認」。
+誘答選項可包含：局部正確但非主旨、與文本細節混淆、推論過度、忽略轉折或因果。
+
+【輸出格式】請嚴格依照以下 Markdown 結構輸出，不可遺漏任何 # 區塊；不要要求整份輸出為 JSON：
+
+# 題庫總覽
+- 使用方式：本題庫供教師作為能力導向命題草稿，尚非正式考卷。
+- 重要提醒：AI 產出內容僅供教師備課與命題參考，正式使用前仍須由教師自行審查題目、答案、解析、年級適切性與教材範圍。
+- 請摘要列出：科目、年級、範圍、題庫總題數、主要閱讀能力、素材來源。
+
+# 學習目標對照表
+請用 Markdown 表格輸出，欄位固定為：
+| learning_goal_id | 學習目標 | 評量能力 | 題號 | 題數 | 難度分布 | 教師審核摘要 |
+|---|---|---|---|---:|---|---|
+
+# 題目清單
+每一道題目請使用下列格式，並至少包含所有欄位。題庫題號請全卷連續編號，不要在不同向度重新從 Q1 開始。
+
+## Q1
+- 題號：Q1
+- 科目：國語
+- 年級：${S.grade}
+- 單元：${S.scope}
+- 學習目標：學習目標或評量向度
+- 評量能力：閱讀理解／主旨判斷／推論／詞義理解／句意理解／文本證據判讀
+- 文本類型：故事／說明文／公告／對話／短文／圖表文字
+- 閱讀能力：擷取訊息／詞義理解／句意理解／段落大意／篇章主旨／推論／寫法判斷／文本證據判讀
+- 題型：選擇題／填充題／簡答題／其他
+- 難度：基礎／中階／進階
+- 認知層次：理解／應用／推論／分析
+- 題目素材類型：課文／短文／對話／語句／段落
+- 題目素材：提供學生可見的必要文本
+- 題目：題目內容
+- 選項或作答內容：若適用，列出 (A)(B)(C)(D)
+- 答案：正答或參考答案
+- 答案依據：指出可支持答案的文本依據
+- 答案依據句或段落：列出依據句子、依據段落或文本線索；若依據不足請寫「建議教師確認」
+- 誘答設計理由：說明錯誤選項對應的可能誤解
+- 常見迷思或錯誤類型：例如 只看關鍵字、過度推論、忽略上下文
+- 是否超出文本可推論範圍：否／可能，建議教師確認
+- 解析：必要解析或評分標準
+- AI 初步檢核：使用保守語句，例如「AI 初步檢核：未見明顯問題，仍待教師複核」或「AI 初步檢核：建議教師確認答案依據」
+- 教師審核提醒：正式使用前仍須教師審查、修正與決定是否採用
+
+# 答案與解析
+請用 Markdown 表格列出每題答案、答案依據、必要解析與評分標準。
+
+# 教師快速檢核表
+請用 Markdown 表格輸出，欄位固定為：
+| 題號 | 是否對應學習目標 | 是否符合年級程度 | 是否符合教材範圍 | 答案是否唯一 | 答案依據是否充分 | 題幹是否清楚 | 是否適合正式使用 | 教師審核狀態 | 教師備註 |
+|---|---|---|---|---|---|---|---|---|---|
+提醒：AI 只提供初步檢核，不替教師做最終判斷。
+
+=== 素材內容開始 ===
+${matParts.join('\n\n')}
+=== 素材內容結束 ===`;
+}
+
+function buildExamPrompt(targetScores,isMain,options={}){
+  const d=DIFF[S.difficulty];
+  const compact=!!options.compact;
+  const includeOutline=options.includeOutline!==false;
+  const ord=['一','二','三','四','五','六','七','八','九','十'];
+  const scoreSpec=targetScores.map((s,idx)=>`${s.ordName||ord[idx]||(idx+1).toString()}、${s.name}：${s.count} 題 × ${s.each} 分 = ${s.subtotal} 分`).join('\n');
+  const objSpec=S.objectives.filter(o=>o.checked).map(o=>`- ${o.name}（比重 ${o.weight}%）`).join('\n');
+  const mat=getMaterialText();
+  const subjectRules={
+    '數學':`【數學科專屬命題規則】
+1. 數字大小須符合該年級的數字範圍，應用題情境數字不可與其他題重複。
+2. 計算題必須附上「列式」欄位，不可只要求填答案。
+3. 應用題情境必須貼近台灣學生生活（如：便利商店、夜市、班級活動）。`,
+    '自然':`【自然科專屬命題規則】
+1. 變因控制題必須明確區分操縱、控制、應變變因。
+2. 是非題敘述不可透露選擇題答案。
+3. 實驗題必須描述實驗目的，不可只給數據要求填空。
+4. 【科學閱讀測驗專屬規則】
+   - AI 須自創一篇 180-220 字的科普短文，主題與本次評量單元核心概念強相關。
+   - 短文必須延伸到課本未直接出現的應用情境（生活情境、自然現象、科技應用等）。
+   - 文字難度須符合該年級程度，禁止直接複製教材原文。
+   - 固定結構（分數依老師設定的總分自動換算，選擇題佔60%、問答題佔40%）：
+     【選擇題】3題，依序為：
+       第1題：連結單元知識（需搭配短文理解才能作答）
+       第2題：從文本提取訊息（答案明確在文本中）
+       第3題：延伸推論（需結合文本＋單元知識共同判斷）
+       每題分數 = 總分 × 60% ÷ 3，若無法整除請自動調整為整數且合計等於總分60%。
+     【問答題】2題：
+       每題分數 = 總分 × 40% ÷ 2，若無法整除請自動調整為整數且合計等於總分40%。
+       - AI 依題目性質自行判斷使用「純開放式」或「限定式」：
+         純開放式：請用自己的話說明……
+         限定式：請寫出……，並列舉……
+       - 問答題須結合課程單元知識作答，不可只靠閱讀短文即能回答。
+       - 每題須附「評分標準」與「參考答案」（含關鍵得分點）。
+   - 選擇題每題選項四個，禁止出現「以上皆是／皆非」選項。
+   - 整體輸出格式如下：
+     【科學閱讀測驗】共___分
+     閱讀下文，回答第＿至＿題。
+     ▋（短文標題）
+     （180-220字短文）
+     （一）選擇題（每題___分）
+     第＿題⋯⋯
+     (A)⋯ (B)⋯ (C)⋯ (D)⋯
+     [對應目標：＿＿]
+     （二）問答題（每題___分）
+     第＿題⋯⋯
+     [題型：開放式／限定式]
+     [評分標準：⋯⋯]
+     [參考答案：⋯⋯]`,
+    '社會':`【社會科專屬命題規則】
+1. 時間排序題答案不可在其他題目暗示。
+2. 配合題正確配對不可在選擇題提及。
+3. 地圖判讀題必須說明方向標或比例尺的判讀方式。`,
+    '英語':`【英語科專屬命題規則】
+1. 不可出現未學過的單字（若必要須加註中文）。
+2. 克漏字答案不可出現在閱讀題幹中。
+3. 聽力腳本須標明「朗讀兩次」，語速說明為「正常語速」。`,
+  };
+  // 動態計算台灣學年度（8月為新學年度分界）
+  const today = new Date();
+  const rocYear = today.getFullYear() - 1911 - (today.getMonth() < 7 ? 1 : 0);
+  const fmt=isMain?`內湖國小 ${rocYear} 學年度第___學期 定期評量 ${S.subject}科試卷\n${S.grade}___班 座號：_______ 姓名：_______\n\n（依序輸出各大題）`:'（依序輸出分配給你的大題）';
+  const outlineSection=includeOutline?`=== 知識萃取大綱 ===
+（最多 5 點，每點一行，只列本次命題必要概念）
+
+`:'';
+  const compactRule=compact?`
+【輸出長度控制】
+1. 不要輸出命題理念、設計說明、逐題詳解或冗長分析。
+2. 答案卷只列「題號、答案、必要評分標準」。選擇題、是非題、填充題不寫解析。
+3. 學習目標對應統計請用審題表摘要格式列出目標、題號、分數與佔比，不寫說明段落。
+4. 防洩漏自檢報告若無問題，只寫「未發現跨題洩漏」。
+5. 不要輸出圖片生成指令；配圖將由另一個按鈕事後產生。
+`:`
+【輸出長度控制】
+1. 知識萃取大綱最多 5 點，每點一行。
+2. 答案卷、審題表摘要與自檢報告保持精簡，不寫不必要的逐題解析。
+3. 不要輸出圖片生成指令；配圖將由另一個按鈕事後產生。
+`;
+  return `你是一位資深且嚴謹的國小命題教師，專精 ${S.subject} 科，熟悉國小紙本評量與審題流程。
+【輸出硬性限制】
+1. 絕對禁止輸出任何開場白、結尾語、思考過程或未指定區塊。
+2. 只能處理【你負責的題型配分清單】，不要自行新增大題、刪除大題或更改配分。
+3. 每一大題的題數、每題分數、小計都必須與配分清單完全一致。
+4. 題目內容必須使用繁體中文，符合台灣國小 ${S.grade} 程度。
+
+<任務一：知識萃取>
+請仔細閱讀【教材內容】，只在輸出格式要求時萃取精簡知識大綱。
+
+<任務二：正式命題>
+嚴格根據任務一萃取出的知識點，以及下方配分條件，產出正式考卷。
+
+【命題鐵則】
+1. 題目必須回扣教材或學習目標，不可考教材外冷知識。
+2. 素養題必須換殼：情境素養題不可照抄教材人名、地名、課文原句或原始數字，必須改寫成新的生活情境。
+3. 基礎題可使用教材關鍵詞與核心概念，但避免整段複製教材原文。
+4. 每題只測一個主要概念，題幹需清楚、可作答、無歧義。
+5. 選擇題必須只有一個最佳答案；誘答選項要合理，禁止「以上皆是」「以上皆非」「無法判斷」。
+6. 指標絕對吻合：標註的對應指標必須與題目真實測驗內容 100% 吻合。
+7. 選擇題三行式排版：
+   第一行：題幹
+   第二行：(A) 選項一  (B) 選項二  (C) 選項三  (D) 選項四
+   第三行：[對應指標：學習目標名稱]
+8. 手寫題、問答題、作圖題必須在答案卷提供「參考答案」與「評分標準」。
+9. 跨題不得洩漏：同一份試卷中，任何題目的題幹、選項、答案卷前文不得暗示其他題目的答案。
+10. 完成輸出前請自行檢查：題數、配分、答案卷、目標統計、防洩漏報告是否齊全；不要輸出檢查過程。
+
+${subjectRules[S.subject]||''}
+${compactRule}
+
+【基本資訊】學校：內湖國小 ／ 科目：${S.subject} ／ 年級：${S.grade} ／ 範圍：${S.scope}
+難度：${d.label}（基礎 ${d.basic}%／中階 ${d.mid}%／進階 ${d.adv}%）
+
+【你負責的題型配分清單】
+${scoreSpec}
+
+【學習目標與配分比重】
+${objSpec}
+
+【輸出格式】
+
+${outlineSection}
+=== 正式試題 ===
+${fmt}
+請依【你負責的題型配分清單】逐大題輸出，每大題標題格式為「一、題型名稱（共 __ 分）」；題號在各大題內重新編號，答案卷請用「一-1、一-2」格式避免混淆。
+每題後方至少標註：[配分：__ 分] [難度：基礎／中階／進階] [對應目標：...]，選擇題並須符合三行式排版。
+
+═══ 答案卷 ═══
+（列出所有題號的答案；非選擇題需列參考答案與評分標準）
+
+═══ 學習目標對應統計 ═══
+請用下列審題表摘要格式輸出，方便貼入試題審核表：
+【大單元名稱｜授課節數｜出題佔分｜佔比(%)｜教學目標/學習目標】
+- 單元名稱｜節數｜__ 分｜__%｜目標名稱｜對應題號：__
+【題型配分明細】
+- 大題｜題型｜題數｜每題分數｜小計
+【命題者自評提醒】
+- 扣緊教學目標與節數比例：是／需調整
+- 未直接使用教科書廠商試題：是／需調整
+- 預估應試時間 40-60 分鐘：是／需調整
+- 內容符合學生能力與真實情境：是／需調整
+- 遵守迴避與保密原則：是
+小計需等於你負責的總分。
+
+═══ 防洩漏自檢報告 ═══
+（檢查題幹、選項、答案是否互相洩漏；若無問題只寫「未發現跨題洩漏」）
+
+=== 教材內容開始 ===
+${mat}
+=== 教材內容結束 ===`;
+}
+
+function buildBankPrompt(targetScores,isMain){
+  const d=DIFF[S.difficulty];
+  const itemSpec=targetScores.map(s=>`- ${s.name}：產出 ${s.count} 題題庫題目`).join('\n');
+  const objSpec=S.objectives.filter(o=>o.checked).map(o=>`- ${o.name}（比重 ${o.weight}%）`).join('\n');
+  const mat=getMaterialText();
+  const subjectRules={
+    '數學':'數字與情境須符合年級程度；應用題要貼近學生生活，並在答案索引提供列式或解題關鍵。',
+    '自然':'實驗、觀察、變因控制題需明確描述情境；資料表、實驗流程不得直接透露答案。',
+    '社會':'地圖、時間序、因果與比較題需給足資料，但題幹資料不可直接提示答案。',
+    '英語':'只使用已學字詞與句型；若有聽力或閱讀題，請附腳本或短文，避免未教單字。'
+  };
+  return `你是一位資深國小命題教師。請根據教材「產出題庫」，不是正式考卷。
+【輸出硬性限制】
+1. 不要輸出班級、座號、姓名、完整試卷封面，也不要要求總分 100 分。
+2. 只產出【題庫規格】列出的題型與題數，不要自行新增題型。
+3. 題庫是給老師挑題與自行組卷用，因此每題必須能獨立使用，不可依賴前後題資訊。
+4. 請嚴格只輸出指定區塊，不要加開場白、結尾語或思考過程。
+
+【基本資訊】科目：${S.subject} ／ 年級：${S.grade} ／ 範圍：${S.scope}
+難度配置：${d.label}（基礎 ${d.basic}%／中階 ${d.mid}%／進階 ${d.adv}%）
+
+【題庫規格】
+${itemSpec}
+
+【學習目標】
+${objSpec}
+
+【命題規則】
+1. 每一題都要回扣教材或學習目標，不可超出本次範圍。
+2. 同題型內要有可挑選性：請安排不同情境、不同測驗焦點或不同難度，避免換字重複。
+3. 每題只測一個主要概念，題幹清楚、無歧義，選擇題必須只有一個最佳答案。
+4. 不要把答案藏在其他題目的題幹、選項或題組材料中。
+5. 每題都標註「建議難度、對應目標、建議配分、挑題理由、AI 初步檢核、教師審核狀態、教師備註」。
+6. 選擇題維持四個選項，誘答選項需合理，禁止「以上皆是」「以上皆非」「無法判斷」。
+7. 手寫題、問答題、作圖題需在答案索引提供參考答案與評分標準。
+8. 不要輸出圖片生成指令；配圖可由結果頁另一個按鈕事後產生。
+9. AI 初步檢核只能使用保守語句，不得使用「通過」作為最終判斷。
+${subjectRules[S.subject]||''}
+
+【輸出格式】請嚴格依照以下 Markdown 結構輸出，不可遺漏任何 # 區塊；不要要求整份輸出為 JSON：
+
+# 題庫總覽
+- 使用方式：本題庫供教師挑題、調整順序與排版，尚非正式考卷。
+- 重要提醒：AI 產出內容僅供教師備課與命題參考，正式使用前仍須由教師自行審查題目、答案、解析、年級適切性與教材範圍。
+- 請摘要列出：科目、年級、範圍、難度配置、題庫總題數、涵蓋題型、涵蓋學習目標。
+
+# 學習目標對照表
+請用 Markdown 表格輸出，欄位固定為：
+| learning_goal_id | 學習目標 | 題號 | 題數 | 難度分布 | 題型分布 | 教師審核摘要 |
+|---|---|---|---:|---|---|---|
+
+# 題目清單
+每一道題目請使用下列格式，並至少包含所有欄位。題庫題號請全卷連續編號，不要在不同題型重新從 Q1 開始。
+
+## Q1
+- 題號：Q1
+- 科目：${S.subject}
+- 年級：${S.grade}
+- 單元或教材範圍：${S.scope}
+- 學習目標代碼：LG-__
+- 學習目標：學習目標名稱
+- 能力標籤：例如 概念理解、生活應用、資料判讀、圖表推論、多步驟解題
+- 題型：選擇題／填充題／問答題／作圖題／其他
+- 難度：基礎／中階／進階
+- 認知層次：記憶／理解／應用／推論／分析
+- 題目：題目內容
+- 選項：若適用，列出 (A)(B)(C)(D)
+- 答案：正答或參考答案
+- 解析：必要解析或評分標準
+- AI 初步檢核：只能使用保守語句，例如「AI 初步檢核：未見明顯問題，仍待教師複核」「AI 初步檢核：建議教師確認答案唯一性」「AI 初步檢核：可能需確認是否超出教材範圍」「AI 初步檢核：建議調整題幹文字」「AI 初步檢核：建議確認難度是否符合年級」
+- 教師審核狀態：未審（可改為：未審／可用／需修／棄用）
+- 教師備註：
+
+# 答案與解析
+請用 Markdown 表格列出每題答案、必要解析與評分標準。選擇題需列正答，非選擇題需列參考答案與評分標準。
+
+# 教師快速檢核表
+請用 Markdown 表格輸出，欄位固定為：
+| 題號 | 是否對應學習目標 | 是否符合年級程度 | 是否符合教材範圍 | 答案是否唯一 | 解析是否合理 | 題幹是否清楚 | 是否適合正式使用 | 教師審核狀態 | 教師備註 |
+|---|---|---|---|---|---|---|---|---|---|
+提醒：AI 只提供初步檢核，不替教師做最終判斷。
+
+# 挑題與組卷建議
+給老師 3-5 點建議，例如可挑幾題基礎題、幾題素養題，如何組成正式考卷，哪些題目可替換；請提醒挑題後仍需核對審題表的目標配分與應試時間。
+
+# AI 初步風險提醒
+請檢查題庫內是否有跨題洩漏答案、答案唯一性疑慮、超出教材範圍、題型過度集中、難度不符年級或選項有爭議。若無明顯問題，請寫「AI 初步檢核：未見明顯問題，仍待教師複核」。
+
+=== 教材內容開始 ===
+${mat}
+=== 教材內容結束 ===`;
+}
+
+function buildCompetencyBankPrompt(targetScores,isMain){
+  const d=DIFF[S.difficulty];
+  const itemSpec=targetScores.map(s=>`- ${s.name}：產出 ${s.count} 題能力導向題庫草稿`).join('\n');
+  const objSpec=S.objectives.filter(o=>o.checked).map(o=>`- ${o.name}（比重 ${o.weight}%）`).join('\n');
+  const mat=getMaterialText();
+  const subjectFocus={
+    '國語':'以閱讀理解為核心，不以單純字詞背誦為主；可使用故事、說明文、公告、對話、短文或圖表文字，並標示閱讀能力、文本依據與文本證據。',
+    '數學':'不以純機械計算為主；強化概念理解、生活情境、資料判讀、多步驟解題、圖形判斷與常見錯誤誘答。',
+    '社會':'定位為社會領域能力導向題型；使用地圖、表格、時間軸、短文、生活情境、公共議題或社區資料，強化公民判斷，避免單純背誦與政治立場引導。',
+    '自然':'不以單純知識背誦為主；強化科學概念、觀察、實驗、圖表判讀、變因判斷、因果推論與迷思概念。',
+    '英語':'以字彙、句型、生活語境與生活語用、短文閱讀、聽讀理解、對話理解、圖文配對與語用理解為主；符合國小英語程度，避免超齡文法與生僻單字。'
+  };
+  return `你是一位國小能力導向命題教師。請根據教材產出「學力檢測（能力導向）模式」題庫草稿，不是正式考卷，也不是官方或縣市學力檢測題庫。
+
+【模式定位】
+本模式參考學力檢測常見題型精神，協助產生能力導向試題草稿；AI 產出內容仍須由教師審查、修正後使用。
+請避免宣稱題目已通過正式審核、可直接正式使用、答案保證完全正確、符合官方學力檢測標準，或屬於官方／縣市學力檢測題庫。
+
+【基本資訊】科目：${S.subject} ／ 年級：${S.grade} ／ 範圍：${S.scope}
+難度配置：${d.label}（基礎 ${d.basic}%／中階 ${d.mid}%／進階 ${d.adv}%）
+
+【題庫規格】
+${itemSpec}
+
+【學習目標】
+${objSpec}
+
+【五科精簡方向】
+國語文：以閱讀理解為核心；素材可為故事、說明文、公告、對話、短文或圖表文字；標示擷取訊息、詞義理解、句意理解、段落大意、篇章主旨、推論、寫法判斷、文本依據或文本證據判讀；不得要求學生根據文本外且無法合理推論的資訊作答。
+數學：不以純機械計算為主；題目可用購物、時間、距離、容量、面積、統計表、圖形、校園生活等情境；標示數與量、四則運算、分數、小數、比與比值、面積與周長、圖形或統計資料判讀；提供解題步驟與驗算提醒；誘答可對應單位未換算、只完成第一步、運算順序錯誤、加減乘除方向混淆、圖形條件誤讀、數值估算不合理。
+社會：定位為社會領域能力導向題型，不得宣稱為官方學力檢測題型；題目可用地圖、表格、時間軸、短文、生活情境、公共議題或社區資料；強化資料判讀、地圖閱讀、時間軸、比較分析、因果推論與公民判斷；避免只考年代、地名、名詞解釋或課本文句背誦；避免政治立場引導或價值灌輸；若涉及公共議題，應以資料判斷與合宜行動為主，不要求學生選擇特定政治立場。
+自然：不以單純知識背誦為主；題目可用實驗情境、觀察紀錄、資料表、圖表、生活自然現象；標示概念理解、觀察判讀、實驗設計、變因判斷、資料解釋、因果推論或生活應用；實驗題盡量標示操作變因、控制變因、應變變因；避免錯誤科學概念與超出國小程度。
+英語文：以字彙、句型、生活語境與生活語用、短文閱讀、聽讀理解、對話理解、圖文配對與語用理解為主；題目可用對話、短文、便條、海報、課表、邀請卡或聽力稿；聽力題須清楚區分學生可見內容與教師用內容，例如學生可見題目、選項，以及教師用聽力稿；選項長度與難度應接近，避免用明顯長短或語法錯誤透露答案；符合國小英語程度，避免超齡文法與生僻單字。
+
+【本次科目聚焦】
+${subjectFocus[S.subject]||'情境應用、資料判讀、概念理解與多步驟思考。'}
+
+【命題規則】
+1. 每題必須回扣教材或學習目標，不可超出本次範圍。
+2. 優先設計閱讀理解、情境應用、資料判讀、圖表推論或多步驟思考題。
+3. 選擇題必須只有一個最佳答案；誘答選項應對應常見迷思或錯誤類型。
+4. 每題都要標示答案依據、誘答設計理由、常見迷思或錯誤類型。
+5. AI 初步檢核只能使用保守語句，不得使用「通過」作為最終判斷。
+6. 不要輸出圖片生成指令；配圖可由結果頁另一個按鈕事後產生。
+7. 社會科不得寫成政治立場引導；自然科不得產生錯誤科學概念；英語科不得超出國小程度。
+8. 請避免宣稱題目已通過正式審核、可直接正式使用、答案保證完全正確、符合官方學力檢測標準，或屬於官方／縣市學力檢測題庫。
+
+【科目專屬欄位】
+請依科目在每題補充下列欄位，不適用者可寫「不適用」：
+- 國語文：文本類型、閱讀能力、文本依據、答案依據句或段落、是否超出文本可推論範圍、教師確認提醒。
+- 數學：數學概念、解題步驟、驗算或合理性檢查、誘答錯誤類型、單位與數值合理性檢核。
+- 社會：資料來源類型、判讀依據、社會或公民概念、是否避免政治立場偏誤、是否避免單純背誦。
+- 自然：科學概念、題目素材類型、變因類型、觀察或資料依據、常見迷思概念、科學正確性檢核、是否符合國小程度。
+- 英語文：vocabulary_level、grammar_scope、context_type、listening_script、student_visible_content（學生可見內容）、teacher_only_content（教師用內容）、是否避免超齡文法與生僻單字。
+
+【輸出格式】請嚴格依照以下 Markdown 結構輸出，不可遺漏任何 # 區塊；不要要求整份輸出為 JSON：
+
+# 題庫總覽
+- 使用方式：本題庫供教師作為能力導向命題草稿，尚非正式考卷。
+- 重要提醒：AI 產出內容僅供教師備課與命題參考，正式使用前仍須由教師自行審查題目、答案、解析、年級適切性與教材範圍。
+- 請摘要列出：科目、年級、範圍、難度配置、題庫總題數、主要評量能力。
+
+# 學習目標對照表
+請用 Markdown 表格輸出，欄位固定為：
+| learning_goal_id | 學習目標 | 評量能力 | 題號 | 題數 | 難度分布 | 教師審核摘要 |
+|---|---|---|---|---:|---|---|
+
+# 題目清單
+每一道題目請使用下列格式，並至少包含所有欄位。題庫題號請全卷連續編號，不要在不同題型重新從 Q1 開始。
+
+## Q1
+- 題號：Q1
+- 科目：${S.subject}
+- 年級：${S.grade}
+- 單元：${S.scope}
+- 學習目標：學習目標名稱
+- 評量能力：閱讀理解／情境應用／資料判讀／圖表推論／多步驟思考／概念理解
+- 題型：選擇題／填充題／問答題／作圖題／其他
+- 難度：基礎／中階／進階
+- 認知層次：理解／應用／推論／分析
+- 題目素材類型：文字情境／表格／圖表／地圖／實驗紀錄／對話／短文／其他
+- 題目素材：提供學生可見的必要材料
+- 題目：題目內容
+- 選項或作答內容：若適用，列出 (A)(B)(C)(D)
+- 答案：正答或參考答案
+- 答案依據：說明答案來自教材、素材或解題步驟的哪一部分
+- 誘答設計理由：說明錯誤選項對應的可能誤解
+- 常見迷思或錯誤類型：例如 單位錯誤、只看關鍵字、忽略條件、過度推論
+- 科目專屬欄位：依【科目專屬欄位】補充，例如數學需列解題步驟與驗算，社會需列判讀依據與偏誤檢核，自然需列變因或科學正確性檢核，英語需區分學生可見內容與教師用聽力稿
+- 解析：必要解析或評分標準
+- AI 初步檢核：使用保守語句，例如「AI 初步檢核：未見明顯問題，仍待教師複核」或「AI 初步檢核：建議教師確認答案唯一性」
+- 教師審核提醒：正式使用前仍須教師審查、修正與決定是否採用
+
+# 答案與解析
+請用 Markdown 表格列出每題答案、答案依據、必要解析與評分標準。選擇題需列正答，非選擇題需列參考答案與評分標準。
+
+# 教師快速檢核表
+請用 Markdown 表格輸出，欄位固定為：
+| 題號 | 是否對應學習目標 | 是否符合年級程度 | 是否符合教材範圍 | 答案是否唯一 | 答案依據是否充分 | 題幹是否清楚 | 是否適合正式使用 | 教師審核狀態 | 教師備註 |
+|---|---|---|---|---|---|---|---|---|---|
+提醒：AI 只提供初步檢核，不替教師做最終判斷。
+
+=== 教材內容開始 ===
+${mat}
+=== 教材內容結束 ===`;
+}
+
+// ═══════════════════════════════════════
+// 雙引擎合併
+// ═══════════════════════════════════════
+function mergeExam(flashText,proText){
+  function extract(text){
+    let outline='',ex='',ans='',st='',leak='',img=''; let matrixJson={};
+    const imgSectionRe=/═{3,}\s*(?:ChatGPT\s*)?(?:圖片生成|出圖)指令.*═{3,}|═{3,}\s*(?:ChatGPT\s*)?(?:圖片生成|出圖)指令/;
+    const mm=text.match(/═══ 國語科雙向細目表對應 ═══[\s\S]*?```json\n([\s\S]*?)\n```/);
+    if(mm&&mm[1]){ try{ matrixJson=JSON.parse(mm[1]); }catch(e){} }
+    const parts=text.split(/={3,}\s*正式試題\s*={3,}|═{3,}\s*正式試題\s*═{3,}/);
+    if(parts.length>1) outline=parts[0].trim();
+    let body=parts.length>1?parts[1]:parts[0];
+    const p1=body.split(/═{3,}\s*答案卷\s*═{3,}/); ex=p1[0]||'';
+    if(p1[1]){ const p2=p1[1].split(/═{3,}\s*學習目標對應統計\s*═{3,}/); ans=p2[0]||'';
+      if(p2[1]){ const p3=p2[1].split(/═{3,}\s*防洩漏自檢報告\s*═{3,}/); st=p3[0]||'';
+        if(p3[1]){ const p4=p3[1].split(imgSectionRe); leak=p4[0]||'';
+          img=(p4[1]||'').split(/═{3,}\s*國語科雙向細目表對應\s*═{3,}/)[0].trim(); }}}
+    return{ outline:outline.trim(),ex:ex.trim(),ans:ans.trim(),st:st.trim(),leak:leak.trim(),img,matrixJson };
+  }
+  const f=extract(flashText),p=extract(proText);
+  let cm={}; for(let k in f.matrixJson) cm[k]=(cm[k]||0)+f.matrixJson[k]; for(let k in p.matrixJson) cm[k]=(cm[k]||0)+p.matrixJson[k];
+  let mo=Object.keys(cm).length>0?`\n\n═══ 國語科雙向細目表對應 ═══\n\`\`\`json\n${JSON.stringify(cm,null,2)}\n\`\`\``:'';
+  const outline=f.outline||p.outline;
+  return `${outline?outline+'\n\n=== 正式試題 ===\n\n':''}${f.ex}\n\n${p.ex}\n\n═══ 答案卷 ═══\n${f.ans}\n\n${p.ans}\n\n═══ 學習目標對應統計 ═══\n${f.st}\n\n${p.st}\n\n═══ 防洩漏自檢報告 ═══\n${f.leak}\n\n${p.leak}${f.img||p.img?'\n\n═══ ChatGPT 圖片生成指令 ═══\n'+f.img+'\n'+p.img:''}${mo}`;
+}
+
+function mergeBank(flashText,proText){
+  const stripTitle=t=>(t||'').replace(/^\s*═{3,}\s*(?:待選題庫|產出題庫)\s*═{3,}\s*/,'').trim();
+  return `═══ 產出題庫 ═══
+${stripTitle(flashText)}
+
+${stripTitle(proText)}`;
+}
+
+// ═══════════════════════════════════════
+// API 呼叫
+// ═══════════════════════════════════════
+function clearRunMeta(){
+  S.lastRunMeta=null;
+  const el=document.getElementById('runMeta');
+  if(!el) return;
+  el.classList.add('hide');
+  el.innerHTML='';
+}
+
+function renderRunMeta(calls,totalMs){
+  const el=document.getElementById('runMeta');
+  if(!el) return;
+  const clean=(calls||[]).filter(Boolean);
+  if(!clean.length){ clearRunMeta(); return; }
+
+  S.lastRunMeta={calls:clean,totalMs};
+  const warnings=clean.flatMap(c=>(c.warnings||[]).map(w=>`${c.label||c.requestedModel||c.task}：${w}`));
+  const modelSummary=clean.map(c=>c.modelUsed||c.requestedModel||'unknown').join(' + ');
+  const callRows=clean.map(c=>{
+    const label=escHTML(c.label||c.task||c.requestedModel||'API');
+    const duration=formatDuration(c.durationMs);
+    const requestId=c.requestId?` · ${escHTML(c.requestId)}`:'';
+    return `<div class="run-meta-call"><span class="run-meta-k">${label}</span><span class="run-meta-v">${escHTML(c.modelUsed||'unknown')} · ${duration}${requestId}</span></div>`;
+  }).join('');
+
+  el.innerHTML=`
+    <div class="run-meta-grid">
+      <div class="run-meta-item"><span class="run-meta-k">本次總耗時</span><span class="run-meta-v">${formatDuration(totalMs)}</span></div>
+      <div class="run-meta-item"><span class="run-meta-k">使用模型</span><span class="run-meta-v">${escHTML(modelSummary)}</span></div>
+      <div class="run-meta-item"><span class="run-meta-k">警告</span><span class="run-meta-v">${warnings.length?warnings.length+' 則':'無'}</span></div>
+    </div>
+    <div class="run-meta-calls">${callRows}</div>
+    ${warnings.length?`<div class="run-meta-warn">${warnings.map(escHTML).join('<br>')}</div>`:''}`;
+  el.classList.remove('hide');
+}
+
+function appendRunMeta(callMeta,extraMs){
+  const prev=S.lastRunMeta||{calls:[],totalMs:0};
+  renderRunMeta([...(prev.calls||[]),callMeta],(prev.totalMs||0)+(extraMs||0));
+}
+
+function formatDuration(ms){
+  const n=Number(ms)||0;
+  if(n<=0) return '未回傳';
+  if(n<1000) return `${n} ms`;
+  return `${(n/1000).toFixed(n<10000?1:0)} 秒`;
+}
+
+function normalizeApiMeta(data,action,model){
+  const task=data.task||'';
+  const label=model==='pro'?'Pro':model==='flash'?'Flash':(task||action||'API');
+  return {
+    label,
+    action,
+    requestedModel:model,
+    task,
+    modelUsed:data.modelUsed||model||'unknown',
+    durationMs:data.durationMs||0,
+    warnings:Array.isArray(data.warnings)?data.warnings:[],
+    usage:data.usage||{},
+    requestId:data.requestId||'',
+    promptVersion:data.promptVersion||'',
+    routeVersion:data.routeVersion||''
+  };
+}
+
+async function callAPI(prompt,action,model='flash'){
+  throw new Error('公開安全版不直接呼叫 AI 後端，請複製 Prompt 至 ChatGPT、Gemini 或 Claude 使用。');
+}
+
+function saveKey(){
+  alert('公開安全版不需要輸入存取資訊，請直接產生並複製 Prompt 使用。');
+}
+
+// ═══════════════════════════════════════
+// Markdown 渲染輸出
+// ═══════════════════════════════════════
+function renderOutput(text) {
+  const el = document.getElementById('outTxt');
+  if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+    marked.setOptions({ breaks: true, gfm: true });
+    el.innerHTML = DOMPurify.sanitize(marked.parse(text));
+  } else {
+    el.textContent = text;
+  }
+}
+
+function outputWithoutMatrix(text){
+  return (text||'').split(/═══ 國語科雙向細目表對應 ═══/)[0].trim();
+}
+
+function imagePromptSectionRe(){
+  return /═{3,}\s*(?:ChatGPT\s*)?(?:圖片生成|出圖)指令.*═{3,}|═{3,}\s*(?:ChatGPT\s*)?(?:圖片生成|出圖)指令/;
+}
+
+function normalizeImagePromptText(text){
+  let clean=(text||'').replace(/```(?:text|markdown)?\s*/g,'').replace(/```\s*/g,'').trim();
+  const re=imagePromptSectionRe();
+  const title=window.NHPS_PROMPTS&&window.NHPS_PROMPTS.IMAGE_SECTION_TITLE
+    ? window.NHPS_PROMPTS.IMAGE_SECTION_TITLE
+    : '═══ ChatGPT 圖片生成指令 ═══';
+  if(!re.test(clean)) clean=`${title}\n${clean}`;
+  return clean;
+}
+
+function insertOrReplaceImagePrompt(output,imgSection){
+  const re=imagePromptSectionRe();
+  const matrixRe=/\n?═{3,}\s*國語科雙向細目表對應\s*═{3,}/;
+  const matrixMatch=(output||'').match(matrixRe);
+  const matrixIdx=matrixMatch&&typeof matrixMatch.index==='number'?matrixMatch.index:-1;
+  const beforeMatrix=matrixIdx>=0?output.slice(0,matrixIdx).trimEnd():output.trimEnd();
+  const matrix=matrixIdx>=0?output.slice(matrixIdx).trimStart():'';
+  const imgMatch=beforeMatrix.match(re);
+  let body=beforeMatrix;
+  if(imgMatch&&typeof imgMatch.index==='number'){
+    body=beforeMatrix.slice(0,imgMatch.index).trimEnd();
+  }
+  return `${body}\n\n${imgSection.trim()}${matrix?'\n\n'+matrix:''}`;
+}
+
+function getExamTextForImagePrompt(){
+  const visible=outputWithoutMatrix(S.output);
+  const ansIdx=visible.search(isBankMode()?/(?:═{3,}\s*題庫答案索引\s*═{3,}|^\s*#\s+答案與解析\s*$)/m:/═{3,}\s*答案卷\s*═{3,}/);
+  return ansIdx>0?visible.slice(0,ansIdx).trim():visible.trim();
+}
+
+async function generateImagePrompts(e){
+  if(!S.output){ alert('尚未產生考卷'); return; }
+  if(isPublicPromptOnlyMode()){
+    alert('公開安全版暫不提供一鍵圖片提示詞生成。請複製命題 Prompt 或 AI 回傳結果後，自行在 AI 工具中整理圖片提示詞。');
+    return;
+  }
+  if(!window.NHPS_PROMPTS||typeof window.NHPS_PROMPTS.buildChatGPTImagePromptRequest!=='function'){
+    alert('出圖 prompt 模組尚未載入，請重新整理頁面後再試。');
+    return;
+  }
+  const btn=e&&e.target?e.target.closest('.btn'):document.getElementById('btnGenImgPrompt');
+  const orig=btn?btn.innerHTML:'';
+  if(btn){ btn.disabled=true; btn.textContent='正在產生出圖指令...'; }
+  const startedAt=Date.now();
+  try{
+    const prompt=window.NHPS_PROMPTS.buildChatGPTImagePromptRequest({
+      subject:S.subject,
+      grade:S.grade,
+      scope:S.scope,
+      mode:isBankMode()?'產出題庫':'正式考卷',
+      examText:getExamTextForImagePrompt()
+    });
+    const api=await callAPI(prompt,'generate','flash');
+    const section=normalizeImagePromptText(api.text);
+    S.output=insertOrReplaceImagePrompt(S.output,section);
+    renderOutput(outputWithoutMatrix(S.output));
+    api.meta.label='出圖';
+    appendRunMeta(api.meta,Date.now()-startedAt);
+    if(btn) doCopy(e&&e.target?e:{target:btn},section,'已產生並複製 ChatGPT 出圖指令！');
+    else openCopyAssist(section,'已產生 ChatGPT 出圖指令！');
+  }catch(err){
+    alert('產生 ChatGPT 出圖指令失敗：'+err.message);
+  }finally{
+    if(btn){ btn.disabled=false; btn.innerHTML=orig; }
+  }
+}
+
+// ═══════════════════════════════════════
+// 複製功能
+// ═══════════════════════════════════════
+function copyAll(e){ doCopy(e,outputWithoutMatrix(S.output),isPublicPromptOnlyMode()?'已複製 Prompt！':(isBankMode()?'已複製產出題庫！':'已複製完整考卷！')); }
+function copyAns(e){
+  if(isPublicPromptOnlyMode()){
+    alert('公開安全版只產生命題 Prompt。請先複製 Prompt 至 AI 工具取得結果後，再由教師整理答案區。');
+    return;
+  }
+  if(isBankMode()){
+    const newAnsRe=/^\s*#\s+答案與解析\s*$/m;
+    const newNextRe=/^\s*#\s+教師快速檢核表\s*$/m;
+    let m1=S.output.search(newAnsRe),m2=S.output.search(newNextRe);
+    if(m1<0){
+      const oldAnsRe=/═{3,}\s*題庫答案索引\s*═{3,}/;
+      const oldNextRe=/═{3,}\s*(?:產出題庫|學習目標覆蓋統計|挑題與排版建議|防洩漏自檢報告|國語科雙向細目表對應|(?:ChatGPT\s*)?(?:圖片生成|出圖)指令)\s*═{3,}/;
+      m1=S.output.search(oldAnsRe);
+      m2=m1>=0?S.output.slice(m1+1).search(oldNextRe):-1;
+      if(m2>=0) m2+=m1+1;
+    }
+    if(m1<0){ doCopy(e,outputWithoutMatrix(S.output),'已複製！'); return; }
+    const text=m2>m1?S.output.substring(m1,m2).trim():S.output.substring(m1).trim();
+    doCopy(e,text.split(/═══ 國語科雙向細目表對應 ═══/)[0].trim(),'已複製答案索引！');
+    return;
+  }
+  const ansRe=isBankMode()?/(?:═{3,}\s*題庫答案索引\s*═{3,}|^\s*#\s+答案與解析\s*$)/m:/═{3,}\s*答案卷\s*═{3,}/;
+  const nextRe=isBankMode()?/(?:═{3,}\s*學習目標覆蓋統計\s*═{3,}|^\s*#\s+教師快速檢核表\s*$)/m:/═{3,}\s*學習目標對應統計\s*═{3,}/;
+  const m1=S.output.search(ansRe),m2=S.output.search(nextRe);
+  if(m1<0){ doCopy(e,outputWithoutMatrix(S.output),'已複製！'); return; }
+  const text=m2>m1?S.output.substring(m1,m2).trim():S.output.substring(m1).trim();
+  doCopy(e,text.split(/═══ 國語科雙向細目表對應 ═══/)[0].trim(),isBankMode()?'已複製答案索引！':'已複製答案卷！');
+}
+function copyObj(e){
+  if(isPublicPromptOnlyMode()){
+    alert('公開安全版只產生命題 Prompt。請先複製 Prompt 至 AI 工具取得結果後，再由教師整理學習目標區。');
+    return;
+  }
+  if(isBankMode()){
+    const newObjRe=/^\s*#\s+學習目標對照表\s*$/m;
+    const newNextRe=/^\s*#\s+題目清單\s*$/m;
+    let m1=S.output.search(newObjRe),m2=S.output.search(newNextRe);
+    if(m1<0){
+      const oldObjRe=/═{3,}\s*學習目標覆蓋統計\s*═{3,}/;
+      const oldNextRe=/═{3,}\s*(?:產出題庫|題庫答案索引|挑題與排版建議|防洩漏自檢報告|國語科雙向細目表對應|(?:ChatGPT\s*)?(?:圖片生成|出圖)指令)\s*═{3,}/;
+      m1=S.output.search(oldObjRe);
+      m2=m1>=0?S.output.slice(m1+1).search(oldNextRe):-1;
+      if(m2>=0) m2+=m1+1;
+    }
+    if(m1<0){ alert('未找到學習目標覆蓋統計'); return; }
+    const text=m2>m1?S.output.substring(m1,m2).trim():S.output.substring(m1).trim();
+    doCopy(e,text.split(/═══ 國語科雙向細目表對應 ═══/)[0].trim(),'已複製目標覆蓋統計！');
+    return;
+  }
+  const objRe=isBankMode()?/(?:═{3,}\s*學習目標覆蓋統計\s*═{3,}|^\s*#\s+學習目標對照表\s*$)/m:/═{3,}\s*學習目標對應統計\s*═{3,}/;
+  const m1=S.output.search(objRe),m2=S.output.search(isBankMode()?/(?:^\s*#\s+題目清單\s*$|═{3,}\s*(?:ChatGPT\s*)?(?:圖片生成|出圖)指令)/m:/═{3,}\s*(?:ChatGPT\s*)?(?:圖片生成|出圖)指令/);
+  if(m1<0){ alert(isBankMode()?'未找到學習目標覆蓋統計':'未找到學習目標統計'); return; }
+  const text=m2>m1?S.output.substring(m1,m2).trim():S.output.substring(m1).trim();
+  doCopy(e,text.split(/═══ 國語科雙向細目表對應 ═══/)[0].trim(),isBankMode()?'已複製目標覆蓋統計！':'已複製目標統計！');
+}
+function copyImg(e){
+  if(isPublicPromptOnlyMode()){
+    alert('公開安全版暫不提供一鍵圖片提示詞生成。');
+    return;
+  }
+  const m1=S.output.search(/═{3,}\s*(?:ChatGPT\s*)?(?:圖片生成|出圖)指令/),m2=S.output.search(/═{3,}\s*國語科雙向細目表對應\s*═{3,}/);
+  if(m1<0){ alert('尚未產生 ChatGPT 出圖指令，請先按「產生 ChatGPT 出圖指令」。'); return; }
+  const text=m2>m1?S.output.substring(m1,m2).trim():S.output.substring(m1).trim();
+  doCopy(e,text,'已複製 ChatGPT 出圖指令！');
+}
+async function writeClipboardText(text){
+  if(navigator.clipboard&&window.isSecureContext){
+    try{
+      await navigator.clipboard.writeText(text);
+      const verified=await verifyClipboardText(text);
+      return {verified};
+    }catch(e){}
+  }
+  const ta=document.createElement('textarea');
+  ta.value=text;
+  ta.setAttribute('readonly','');
+  ta.style.position='fixed';
+  ta.style.left='-9999px';
+  ta.style.top='0';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  ta.setSelectionRange(0,ta.value.length);
+  let ok=false;
+  try{ ok=document.execCommand('copy'); }catch(e){ ok=false; }
+  document.body.removeChild(ta);
+  if(!ok) throw new Error('COPY_FAILED');
+  const verified=await verifyClipboardText(text);
+  return {verified};
+}
+async function verifyClipboardText(text){
+  if(!(navigator.clipboard&&navigator.clipboard.readText&&window.isSecureContext)) return false;
+  try{
+    const current=await navigator.clipboard.readText();
+    return current===text;
+  }catch(e){
+    return false;
+  }
+}
+function selectCopyText(){
+  const ta=document.getElementById('copyText');
+  if(!ta) return;
+  ta.focus();
+  ta.select();
+  ta.setSelectionRange(0,ta.value.length);
+}
+function openCopyAssist(text,msg){
+  const modal=document.getElementById('copyModal');
+  const ta=document.getElementById('copyText');
+  const p=document.getElementById('copyModalMsg');
+  if(!modal||!ta) return alert('複製未確認，請手動選取文字複製。');
+  ta.value=text;
+  if(p) p.textContent=`${msg.replace(/^已/,'')}可能已送出，但瀏覽器無法確認剪貼簿內容。下方文字已自動選取，請按 Ctrl+C 複製。`;
+  modal.classList.remove('hide');
+  setTimeout(selectCopyText,50);
+}
+function shouldForceManualCopy(){
+  return location.hostname==='127.0.0.1'||location.hostname==='localhost';
+}
+function doCopy(e,text,msg){
+  writeClipboardText(text).then((result)=>{
+    if(shouldForceManualCopy()||!result||!result.verified){ openCopyAssist(text,msg); return; }
+    if(!e||!e.target){ openCopyAssist(text,msg); return; }
+    const btn=e.target.closest('.btn'),orig=btn.innerHTML;
+    if(!btn){ openCopyAssist(text,msg); return; }
+    btn.innerHTML=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> ${msg}`;
+    btn.style.background='var(--accent-l)'; btn.style.color='var(--accent)';
+    setTimeout(()=>{ btn.innerHTML=orig; btn.style.background=''; btn.style.color=''; },2000);
+  }).catch(()=>openCopyAssist(text,msg));
+}
+
+// ═══════════════════════════════════════
+// 下載審核表
+// ═══════════════════════════════════════
+function downloadReview(){ if(S.subject==='國語') downloadChineseReview(); else downloadGenericReview(); }
+
+function downloadGenericReview(){
+  const objs=S.objectives.filter(o=>o.checked);
+  const headerRows=[['新竹市香山區內湖國小'],['學年度第___學期 第___次學習評量 試題審核表'],[],['年級／領域',S.grade+'／'+S.subject,'','命題教師',''],['評量範圍',S.scope,'','版本',''],[], ['大單元名稱','授課節數','出題佔分','佔比(%)','教學目標/學習目標']];
+  const objRows=objs.map(o=>[o.source&&o.source!=='老師輸入'?o.source:S.scope,o.hours||'',o.weight+' 分',o.weight+'%',o.name]);
+  const typeRows=[[],['題型配分明細'],['大題','題型','題數','每題分數','小計']];
+  const ord=['一','二','三','四','五','六','七','八','九','十'];
+  S.scores.forEach((s,i)=>typeRows.push([ord[i]||(i+1),s.name,s.count,s.each,s.subtotal]));
+  typeRows.push(['','','','合計',S.scores.reduce((a,s)=>a+s.subtotal,0)]);
+  const checkRows=[[],['★ 命題者自評（打√表示達成）'],['□ 扣緊教學目標（或學習目標）與合於節數比例之配分。'],['□ 教師自行命題，未直接使用教科書廠商提供之試題。'],['□ 預估試題鑑別度指數（高分組答對率－低分組答對率）在20以上。'],['□ 預估應試時間為每份卷40至60分鐘之間。'],['□ 內容符合學生能力與真實情境，無爭議性、悖於常理或違背法規。'],['□ 遵守迴避原則與保密原則。'],[],['命題者簽名：'],[],['一審  □傳閱 □共同討論','審題教師簽名：'],['二審  □傳閱 □共同討論','審題教師簽名：'],['三審  □傳閱 □共同討論','審題教師簽名：']];
+  const allRows=[...headerRows,...objRows,...typeRows,...checkRows];
+  const ws=XLSX.utils.aoa_to_sheet(allRows);
+  ws['!cols']=[{wch:20},{wch:12},{wch:12},{wch:12},{wch:40}];
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:4}},{s:{r:1,c:0},e:{r:1,c:4}}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'試題審核表');
+  XLSX.writeFile(wb,`審核表_${S.grade}${S.subject}_${S.scope}.xlsx`);
+}
+
+function downloadChineseReview(){
+  let matrixScores={};
+  const mm=S.output.match(/═══ 國語科雙向細目表對應 ═══[\s\S]*?```json\n([\s\S]*?)\n```/);
+  if(mm&&mm[1]){ try{ matrixScores=JSON.parse(mm[1]); }catch(e){} }
+const topRows=[
+    [`新竹市內湖國小 ${S.grade} 國語科試題審核表`],
+    ['參照許育健教授國語科評量向度佔分比例建議擬定(114.05)'],
+    [],['評量範圍：',S.scope,'','命題教師：','','',''],
+    [],
+  ];
+const objRows=[];
+  const matrixRows=[
+    [],['字 詞 短 語','','','','','',''],
+    ['分數佔比','評量向度','評量項目','細項舉例','入題(請打勾)','佔分','小計'],
+    ['低年級50％ / 中年級30％ / 高年級20％','字音','正確字音','指認/習寫','','',''],
+    ['','','近字音','語境辨析','','',''],['','','多字音','語境辨析','','',''],
+    ['','','變字音','語境辨析','','',''],['','字形','確認字形','指認/習寫','','',''],
+    ['','','筆畫筆順','筆畫名稱/習寫/筆順原則','','',''],
+    ['','','分辨部首','部首意義/常用部首/罕用部首','','',''],
+    ['','','部件組合','常見部件/部件結構原則','','',''],
+    ['','','造字原則','(六書)象形指事/會意形聲/轉注假借','','',''],
+    ['','字詞義','字詞釋義','字詞義解釋','','',''],
+    ['','','近義字詞','辨識/比較應用','','',''],
+    ['','','反義字詞','區別/比較應用','','',''],
+    ['','','類詞應用','量詞/疊詞/狀聲詞/形容詞','','',''],
+    ['','','四字詞語','解釋句義/指認句義','','',''],
+    ['','','結構詞語','聯合結構/偏正結構/動實結構/特殊結構','','',''],
+    [],['句 式 語 法','','','','','',''],
+    ['分數佔比','評量向度','評量項目','細項舉例','入題(請打勾)','佔分','小計'],
+    ['低年級30％ / 中年級50％ / 高年級30％','句式','句意理解','解釋句義/指認句義','','',''],
+    ['','','文句組成','完成句子/語詞造句/標點造句','','',''],
+    ['','','句型辨識','句型練習/照樣造句/單句複句關聯句型','','',''],
+    ['','','句式變化','換句話說/倒裝句/被動句/省略句/合併句子','','',''],
+    ['','','標點符號','常用符號理解及應用','','',''],
+    ['','','句群關係','對話練習/句群關係判斷','','',''],
+    ['','語法','常用修辭','擬人/設問/類疊/誇飾/摹寫/排比/借代','','',''],
+    [],['段 篇 讀 寫','','','','','',''],
+    ['分數佔比','評量向度','評量項目','細項舉例','入題(請打勾)','佔分','小計'],
+    ['低年級20％ / 中年級20％ / 高年級50％','閱讀理解','提取訊息','特定詞句/詞句定義/事件細節/主題觀點','','',''],
+    ['','','推論訊息','事件因果/段意簡述/指稱代詞/角色關係','','',''],
+    ['','','整合詮釋','全文主題/人物特質/跨段比較/氣氛推測','','',''],
+    ['','','比較評估','虛擬辨識/情節評估/文章評析/作者意圖','','',''],
+    ['','寫作練習','摘要整合','中心句/意義段/文章結構/段落大意','','',''],
+    ['','','推估主旨','作者意圖/寫作目的/隱含道理','','',''],
+    ['','','文體應用','便條/日記/書信/劇本','','',''],
+    ['','','句子變化','擴寫/縮寫/續寫/改寫','','',''],
+    ['','','限制習寫','限內容/限形式','','',''],
+    ['總分','','','','','',''],
+    [],['★ 命題者自評（打v表示達成）','簽名：','','','','',''],
+    ['□ 扣緊教學目標(或學習目標)與合於節數比例之配分。','','','','','',''],
+    ['□ 教師自行命題，未直接使用教科書廠商提供之試題。','','','','','',''],
+    ['□ 預估試題鑑別度指數(高分組答對率-低分組答對率)在20以上。','','','','','',''],
+    ['□ 預估應試時間為每份卷40至60分鐘之間。','','','','','',''],
+    ['□ 內容符合學生能力與真實情境，無爭議性、悖於常理或違背法規。','','','','','',''],
+    ['□ 遵守迴避原則與保密原則。','','','','','',''],
+    [],
+    ['一審','□ 傳閱    □ 共同討論','審題者(請遵守迴避與保密原則，並簽名)：','','','',''],
+    ['二審','□ 傳閱    □ 共同討論','審題者(請遵守迴避與保密原則，並簽名)：','','','',''],
+    ['三審','□ 傳閱    □ 共同討論','審題者(請遵守迴避與保密原則，並簽名)：','','','',''],
+  ];
+  // 填入 AI 配分
+  let sa=0,sb=0,sc=0;
+  matrixRows.forEach((row,idx)=>{
+    const key=row[2]; if(key&&matrixScores[key]){ row[4]='V'; row[5]=matrixScores[key];
+      if(idx>=3&&idx<=17) sa+=matrixScores[key];
+      if(idx>=21&&idx<=27) sb+=matrixScores[key];
+      if(idx>=31&&idx<=39) sc+=matrixScores[key]; }
+  });
+  matrixRows[3][6]=sa||''; matrixRows[21][6]=sb||''; matrixRows[31][6]=sc||''; matrixRows[40][1]=sa+sb+sc;
+  const allRows=[...topRows,...objRows,...matrixRows];
+  const ws=XLSX.utils.aoa_to_sheet(allRows);
+  ws['!cols']=[{wch:18},{wch:12},{wch:12},{wch:35},{wch:15},{wch:10},{wch:10}];
+  const shift=topRows.length+objRows.length;
+  ws['!merges']=[
+    {s:{r:0,c:0},e:{r:0,c:6}},{s:{r:1,c:0},e:{r:1,c:6}},
+    ...objRows.map((_,idx)=>({s:{r:5+idx,c:4},e:{r:5+idx,c:6}})),
+    {s:{r:shift+1,c:0},e:{r:shift+1,c:6}},{s:{r:shift+19,c:0},e:{r:shift+19,c:6}},{s:{r:shift+29,c:0},e:{r:shift+29,c:6}},
+    {s:{r:shift+3,c:0},e:{r:shift+17,c:0}},{s:{r:shift+21,c:0},e:{r:shift+27,c:0}},{s:{r:shift+31,c:0},e:{r:shift+39,c:0}},
+    {s:{r:shift+3,c:1},e:{r:shift+6,c:1}},{s:{r:shift+7,c:1},e:{r:shift+11,c:1}},{s:{r:shift+12,c:1},e:{r:shift+17,c:1}},
+    {s:{r:shift+21,c:1},e:{r:shift+26,c:1}},{s:{r:shift+31,c:1},e:{r:shift+34,c:1}},{s:{r:shift+35,c:1},e:{r:shift+39,c:1}},
+  ];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'試題審核表');
+  XLSX.writeFile(wb,`國語科專屬審核表_${S.grade}_${S.scope}.xlsx`);
+}
+
+// ═══════════════════════════════════════
+// 研習模式
+// ═══════════════════════════════════════
+function toggleWorkshop(){
+  const on=document.getElementById('wsToggle').checked;
+  S.workshopMode=on; safeSet('nhps_workshop',on?'true':'false');
+}
+
+// ═══════════════════════════════════════
+// 初始化
+// ═══════════════════════════════════════
+initChUploadZones();
+updSteps();
+updateModeUI();
+updateStep1Guide();
+document.getElementById('wsToggle').checked=S.workshopMode;
+</script>
+</body>
+</html>
