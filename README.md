@@ -4,6 +4,8 @@
 
 本公開版只協助教師依教材、年級、科目與命題模式產生命題 Prompt；系統本身不直接呼叫 AI 後端，也不內建任何 API key、token、secret、Apps Script URL、backend 或工具程式。
 
+目前版本已可直接作為 Prompt-only 公開版使用，並會依教師回饋持續優化。
+
 作者：江志宏｜國小總務主任
 聯繫方式：smallcannon@gmail.com
 

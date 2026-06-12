@@ -612,7 +612,7 @@ textarea { resize: vertical; min-height: 130px; line-height: 1.7; }
   <header class="hdr">
     <div class="hdr-badge">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-      個人維護｜Prompt-only 公開安全版
+      個人維護｜Prompt-only 公開版｜持續優化中
     </div>
     <h1>輔助命題系統</h1>
     <p class="hdr-sub">上傳教材 → AI 分析學習目標 → 智慧出題 → 老師審題把關</p>
@@ -1041,7 +1041,7 @@ textarea { resize: vertical; min-height: 130px; line-height: 1.7; }
   <div class="modal">
     <h3>不支援 .doc 格式</h3>
     <p>本系統僅支援 <strong>.docx</strong> 與 <strong>.pdf</strong> 格式。<br><br>
-    目前公開安全版不提供轉檔工具下載。若您的教材是舊版 .doc 格式，建議先使用 Word、Google 文件、LibreOffice 或其他可信工具，另存為 .docx 或匯出為 .pdf 後再上傳。<br><br>
+    Prompt-only 公開版不提供轉檔工具下載。若您的教材是舊版 .doc 格式，建議先使用 Word、Google 文件、LibreOffice 或其他可信工具，另存為 .docx 或匯出為 .pdf 後再上傳。<br><br>
     請勿上傳含學生個資、未公開校務資料或敏感案件內容的檔案。</p>
     <div class="brow"><span></span><button class="btn btn-s" onclick="document.getElementById('docModal').classList.add('hide')">了解</button></div>
   </div>
@@ -1448,7 +1448,7 @@ function updateModeUI(){
   const resultGuide = document.getElementById('resultGuide');
   if(resultGuide){
     resultGuide.innerHTML = promptOnly ? `
-      <div class="result-step"><strong>1. 複製 Prompt</strong>公開安全版不直接呼叫 AI 後端；請將 Prompt 貼到 ChatGPT、Gemini 或 Claude 使用。</div>
+      <div class="result-step"><strong>1. 複製 Prompt</strong>Prompt-only 公開版不直接呼叫 AI 後端；請將 Prompt 貼到 ChatGPT、Gemini 或 Claude 使用。</div>
       <div class="result-step"><strong>2. 教師審查</strong>AI 產出內容須由教師審查、修正後使用，不代表任職學校或任何官方單位題庫，也不代表正式學力檢測標準。</div>
       <div class="result-step"><strong>3. 自行整理</strong>AI 回傳後再由教師自行挑題、修題、整理答案與學習目標。</div>
     ` : (bank ? `
@@ -2103,9 +2103,9 @@ function buildPromptOnlyOutput(title,prompt,options={}){
   const note=options.note||'請複製下方 Prompt 至 ChatGPT、Gemini 或 Claude 使用。AI 產出內容須由教師審查、修正後使用。';
   return `# ${title}
 
-## 公開安全版說明
+## Prompt-only 公開版說明
 
-- 公開安全版不直接呼叫 AI 後端。
+- Prompt-only 公開版不直接呼叫 AI 後端。
 - 本頁不內建後端網址，也不傳送密碼、金鑰或權杖。
 - ${note}
 - 本系統為個人維護之教師輔助工具，不代表任職學校或任何官方單位題庫、官方採用或正式學力檢測標準。
@@ -2999,11 +2999,11 @@ function normalizeApiMeta(data,action,model){
 }
 
 async function callAPI(prompt,action,model='flash'){
-  throw new Error('公開安全版不直接呼叫 AI 後端，請複製 Prompt 至 ChatGPT、Gemini 或 Claude 使用。');
+  throw new Error('Prompt-only 公開版不直接呼叫 AI 後端，請複製 Prompt 至 ChatGPT、Gemini 或 Claude 使用。');
 }
 
 function saveKey(){
-  alert('公開安全版不需要輸入存取資訊，請直接產生並複製 Prompt 使用。');
+  alert('Prompt-only 公開版不需要輸入存取資訊，請直接產生並複製 Prompt 使用。');
 }
 
 // ═══════════════════════════════════════
@@ -3061,7 +3061,7 @@ function getExamTextForImagePrompt(){
 async function generateImagePrompts(e){
   if(!S.output){ alert('尚未產生考卷'); return; }
   if(isPublicPromptOnlyMode()){
-    alert('公開安全版暫不提供一鍵圖片提示詞生成。請複製命題 Prompt 或 AI 回傳結果後，自行在 AI 工具中整理圖片提示詞。');
+    alert('Prompt-only 公開版暫不提供一鍵圖片提示詞生成。請複製命題 Prompt 或 AI 回傳結果後，自行在 AI 工具中整理圖片提示詞。');
     return;
   }
   if(!window.PROMPT_HELPERS||typeof window.PROMPT_HELPERS.buildChatGPTImagePromptRequest!=='function'){
@@ -3101,7 +3101,7 @@ async function generateImagePrompts(e){
 function copyAll(e){ doCopy(e,outputWithoutMatrix(S.output),isPublicPromptOnlyMode()?'已複製 Prompt！':(isBankMode()?'已複製產出題庫！':'已複製完整考卷！')); }
 function copyAns(e){
   if(isPublicPromptOnlyMode()){
-    alert('公開安全版只產生命題 Prompt。請先複製 Prompt 至 AI 工具取得結果後，再由教師整理答案區。');
+    alert('Prompt-only 公開版只產生命題 Prompt。請先複製 Prompt 至 AI 工具取得結果後，再由教師整理答案區。');
     return;
   }
   if(isBankMode()){
@@ -3129,7 +3129,7 @@ function copyAns(e){
 }
 function copyObj(e){
   if(isPublicPromptOnlyMode()){
-    alert('公開安全版只產生命題 Prompt。請先複製 Prompt 至 AI 工具取得結果後，再由教師整理學習目標區。');
+    alert('Prompt-only 公開版只產生命題 Prompt。請先複製 Prompt 至 AI 工具取得結果後，再由教師整理學習目標區。');
     return;
   }
   if(isBankMode()){
@@ -3156,7 +3156,7 @@ function copyObj(e){
 }
 function copyImg(e){
   if(isPublicPromptOnlyMode()){
-    alert('公開安全版暫不提供一鍵圖片提示詞生成。');
+    alert('Prompt-only 公開版暫不提供一鍵圖片提示詞生成。');
     return;
   }
   const m1=S.output.search(/═{3,}\s*(?:ChatGPT\s*)?(?:圖片生成|出圖)指令/),m2=S.output.search(/═{3,}\s*國語科雙向細目表對應\s*═{3,}/);
