@@ -450,6 +450,64 @@ textarea { resize: vertical; min-height: 130px; line-height: 1.7; }
 .out-txt li { margin-bottom: 4px; }
 .out-txt::-webkit-scrollbar { width: 5px; }
 .out-txt::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.ai-org {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 24px;
+  margin-top: 14px;
+  box-shadow: var(--sh-1);
+}
+@media (min-width: 640px) { .ai-org { padding: 32px; } }
+.ai-org textarea {
+  min-height: 180px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.ai-org-note {
+  font-size: 14px;
+  color: var(--text-2);
+  line-height: 1.7;
+  margin-bottom: 12px;
+}
+.ai-org-safe {
+  background: var(--warn-bg);
+  border: 1px solid var(--gold-l);
+  border-radius: var(--r-sm);
+  color: var(--warn);
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 10px 12px;
+  margin: 12px 0;
+}
+.ai-org-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.ai-org-status {
+  min-height: 20px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-3);
+  margin-bottom: 10px;
+}
+.ai-org-status.ok { color: var(--accent-h); font-weight: 700; }
+.ai-org-status.warn { color: var(--warn); font-weight: 700; }
+.ai-org-result {
+  border: 1px solid var(--border-light);
+  border-radius: var(--r-md);
+  background: var(--surface-alt);
+  padding: 14px;
+  min-height: 120px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.ai-org-result:empty::before {
+  content: '整理結果會顯示在這裡。';
+  color: var(--text-3);
+}
 .run-meta {
   border: 1px solid var(--border-light);
   border-radius: var(--r-md);
@@ -1014,6 +1072,25 @@ textarea { resize: vertical; min-height: 130px; line-height: 1.7; }
     </div>
   </div>
 
+  <section class="ai-org" id="aiOrganizer">
+    <div class="pnl-t">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 9h8M8 13h6"/></svg>
+      <span>AI 回覆整理</span>
+    </div>
+    <p class="ai-org-note">可將 ChatGPT、Gemini 或 Claude 回覆貼回本區，系統只在瀏覽器本機整理指定區塊，不會送出到後端。</p>
+    <label class="fl" for="aiOrganizerInput">貼上 AI 回覆</label>
+    <textarea id="aiOrganizerInput" placeholder="請貼上包含 # 精簡題庫摘要表，或 # 試題審核表草稿 等 H1 區塊的 AI 回覆。"></textarea>
+    <div class="ai-org-safe">請勿貼入學生個資、敏感案件或未公開校務資料。本功能僅在瀏覽器本機處理，不會呼叫後端。</div>
+    <div class="ai-org-actions">
+      <button class="btn btn-s" type="button" onclick="organizeBankSummary(event)">整理題庫摘要表</button>
+      <button class="btn btn-s" type="button" onclick="organizeReviewDraft(event)">整理審核表草稿</button>
+      <button class="btn btn-p" type="button" onclick="copyOrganizerResult(event)">複製整理結果</button>
+      <button class="btn btn-s" type="button" onclick="clearOrganizer(event)">清除</button>
+    </div>
+    <div class="ai-org-status" id="aiOrganizerStatus" aria-live="polite"></div>
+    <div class="ai-org-result out-txt" id="aiOrganizerOutput"></div>
+  </section>
+
   <footer class="ftr">
     <div class="ftr-line">出題結果僅供參考，請老師審題後使用</div>
     <div id="copyrightLine">江志宏｜國小總務主任
@@ -1074,7 +1151,7 @@ const S = {
   files:[], matText:'', objectives:[], totalHours:0,
   selTypes:[], selTypeIds:[], scores:[],
   outputMode:'exam',
-  output:'', lastRunMeta:null,
+  output:'', lastRunMeta:null, aiOrganizerResult:'',
   workshopMode: false,
   // 國語科專屬
   chFiles:{ text:[], word:[], sent:[], para:[] },
@@ -3135,6 +3212,103 @@ function renderOutput(text) {
   } else {
     el.textContent = text;
   }
+}
+
+function escapeRegExp(text){
+  return String(text).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+}
+
+function extractH1Section(text,title){
+  const source=String(text||'');
+  const startRe=new RegExp('^\\s*#\\s+'+escapeRegExp(title)+'\\s*$','m');
+  const startMatch=source.match(startRe);
+  if(!startMatch||typeof startMatch.index!=='number') return null;
+  const start=startMatch.index;
+  const afterStart=source.slice(start+startMatch[0].length);
+  const nextMatch=afterStart.match(/^\s*#\s+.+\s*$/m);
+  const end=nextMatch&&typeof nextMatch.index==='number'
+    ? start+startMatch[0].length+nextMatch.index
+    : source.length;
+  return source.slice(start,end).trim();
+}
+
+function getOrganizerInput(){
+  const el=document.getElementById('aiOrganizerInput');
+  return el?el.value.trim():'';
+}
+
+function setOrganizerStatus(message,type){
+  const el=document.getElementById('aiOrganizerStatus');
+  if(!el) return;
+  el.textContent=message||'';
+  el.classList.toggle('ok',type==='ok');
+  el.classList.toggle('warn',type==='warn');
+}
+
+function renderOrganizerResult(markdown){
+  S.aiOrganizerResult=markdown||'';
+  const el=document.getElementById('aiOrganizerOutput');
+  if(!el) return;
+  if(!markdown){ el.innerHTML=''; return; }
+  if(typeof marked!=='undefined'&&typeof DOMPurify!=='undefined'){
+    marked.setOptions({breaks:true,gfm:true});
+    el.innerHTML=DOMPurify.sanitize(marked.parse(markdown));
+  }else{
+    el.textContent=markdown;
+  }
+}
+
+function collectOrganizerSections(text,titles){
+  const found=[],missing=[];
+  titles.forEach(title=>{
+    const section=extractH1Section(text,title);
+    if(section) found.push(section);
+    else missing.push('# '+title);
+  });
+  return {found,missing};
+}
+
+function organizeBankSummary(){
+  const text=getOrganizerInput();
+  if(!text){ renderOrganizerResult(''); setOrganizerStatus('請先貼上 AI 回覆。','warn'); return; }
+  const section=extractH1Section(text,'精簡題庫摘要表');
+  if(!section){
+    renderOrganizerResult('');
+    setOrganizerStatus('找不到「# 精簡題庫摘要表」區塊','warn');
+    return;
+  }
+  renderOrganizerResult(section);
+  setOrganizerStatus('已整理精簡題庫摘要表。','ok');
+}
+
+function organizeReviewDraft(){
+  const text=getOrganizerInput();
+  if(!text){ renderOrganizerResult(''); setOrganizerStatus('請先貼上 AI 回覆。','warn'); return; }
+  const titles=['組卷配分對帳表','試題審核表草稿','缺口提醒','配分偏離紀錄','教師修正建議'];
+  const {found,missing}=collectOrganizerSections(text,titles);
+  if(found.length===0){
+    renderOrganizerResult('');
+    setOrganizerStatus('找不到可整理的審核表草稿相關區塊，請確認是否貼上新版 Prompt B 回覆。','warn');
+    return;
+  }
+  renderOrganizerResult(found.join('\n\n'));
+  const msg=missing.length
+    ? `已整理 ${found.length} 個區塊；未找到：${missing.join('、')}`
+    : '已整理審核表草稿相關區塊。';
+  setOrganizerStatus(msg,missing.length?'warn':'ok');
+}
+
+function copyOrganizerResult(e){
+  const text=S.aiOrganizerResult||'';
+  if(!text){ setOrganizerStatus('尚無整理結果可複製。','warn'); return; }
+  doCopy(e,text,'已複製整理結果！');
+}
+
+function clearOrganizer(){
+  const input=document.getElementById('aiOrganizerInput');
+  if(input) input.value='';
+  renderOrganizerResult('');
+  setOrganizerStatus('已清除貼上內容與整理結果。','ok');
 }
 
 function outputWithoutMatrix(text){
