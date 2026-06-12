@@ -1020,12 +1020,6 @@ textarea { resize: vertical; min-height: 130px; line-height: 1.7; }
 聯繫方式：smallcannon@gmail.com
 本工具為個人維護之教師命題輔助工具，不代表任職學校或任何官方單位立場。
 系統：教師輔助命題系統｜Prompt-only 公開版</div>
-    <div style="margin-top:8px;">
-      <label style="font-size:11px;color:var(--text-3);cursor:pointer;user-select:none;">
-        <input type="checkbox" id="wsToggle" onchange="toggleWorkshop()" style="vertical-align:middle;margin-right:4px;">
-        研習模式（多人同時使用時開啟，自動錯開請求）
-      </label>
-    </div>
   </footer>
 </div>
 
@@ -1081,7 +1075,7 @@ const S = {
   selTypes:[], selTypeIds:[], scores:[],
   outputMode:'exam',
   output:'', lastRunMeta:null,
-  workshopMode: safeGet('prompt_workshop','false')==='true',
+  workshopMode: false,
   // 國語科專屬
   chFiles:{ text:[], word:[], sent:[], para:[] },
   chMat:{ text:'', word:'', sent:'', para:'' },
@@ -1095,6 +1089,20 @@ const copyrightEl = document.getElementById('copyrightLine');
 if (copyrightEl) copyrightEl.textContent = COPYRIGHT_NOTICE;
 
 const NEXT_ARROW_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>';
+const PROMPT_GATE_CODE = '5373184';
+let promptGatePassed = false;
+
+function requirePromptGate(){
+  if(promptGatePassed) return true;
+  const input = window.prompt('即將進入命題 Prompt 產生功能。請輸入操作門檻碼。\\n\\n提醒：這不是網站登入密碼，也不是安全認證，只是避免誤觸的簡易操作門檻。');
+  if(input === null) return false;
+  if(String(input).trim() === PROMPT_GATE_CODE){
+    promptGatePassed = true;
+    return true;
+  }
+  alert('操作門檻碼不正確。這不是登入或安全認證，只是避免誤觸的簡易操作門檻。');
+  return false;
+}
 
 // ═══════════════════════════════════════
 // 難度設定
@@ -2133,6 +2141,7 @@ function buildCurrentPromptOnlyDraft(){
 }
 
 async function generate(){
+  if(!requirePromptGate()) return;
   if(isPublicPromptOnlyMode()){
     const title=isCompetencyAssessmentMode()
       ? '學力檢測（能力導向）題庫 Prompt 草稿'
@@ -2210,6 +2219,7 @@ function buildActiveChineseBankPrompt(){
 async function toStep5Ch(){
   const total=Object.values(S.chScores).reduce((a,v)=>a+v,0);
   if(total!==100){ alert(isBankMode()?'題庫向度比重需等於 100':'配分合計需等於 100 分'); return; }
+  if(!requirePromptGate()) return;
   if(isPublicPromptOnlyMode()){
     const title=isCompetencyAssessmentMode()
       ? '國語學力檢測（能力導向）題庫 Prompt 草稿'
@@ -3328,21 +3338,12 @@ const objRows=[];
 }
 
 // ═══════════════════════════════════════
-// 研習模式
-// ═══════════════════════════════════════
-function toggleWorkshop(){
-  const on=document.getElementById('wsToggle').checked;
-  S.workshopMode=on; safeSet('prompt_workshop',on?'true':'false');
-}
-
-// ═══════════════════════════════════════
 // 初始化
 // ═══════════════════════════════════════
 initChUploadZones();
 updSteps();
 updateModeUI();
 updateStep1Guide();
-document.getElementById('wsToggle').checked=S.workshopMode;
 </script>
 </body>
 </html>
