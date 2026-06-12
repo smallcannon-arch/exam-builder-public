@@ -1104,6 +1104,7 @@ textarea { resize: vertical; min-height: 130px; line-height: 1.7; }
     <div class="ai-org-actions">
       <button class="btn btn-s" type="button" onclick="organizeBankSummary(event)">整理題庫摘要表</button>
       <button class="btn btn-s" type="button" onclick="organizeReviewDraft(event)">整理審核表草稿</button>
+      <button class="btn btn-s" type="button" onclick="validateItemGroupScores(event)">題組配分驗算</button>
       <button class="btn btn-p" type="button" onclick="copyOrganizerResult(event)">複製整理結果</button>
       <button class="btn btn-s" type="button" onclick="clearOrganizer(event)">清除</button>
     </div>
@@ -3322,6 +3323,134 @@ function collectOrganizerSections(text,titles){
     else missing.push('# '+title);
   });
   return {found,missing};
+}
+
+function splitMarkdownTableRow(line){
+  return String(line||'').trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(cell=>cell.trim());
+}
+
+function normalizeTableHeader(text){
+  return String(text||'').replace(/\s+/g,'').replace(/：.*$/,'').trim();
+}
+
+function parseMarkdownTable(section){
+  const lines=String(section||'').split(/\r?\n/).map(line=>line.trim()).filter(line=>line.startsWith('|'));
+  if(lines.length<2) return [];
+  const headers=splitMarkdownTableRow(lines[0]).map(normalizeTableHeader);
+  const indexOf=(name)=>headers.findIndex(header=>header===name||header.startsWith(name));
+  const idx={
+    question:indexOf('題號'),
+    type:indexOf('類型'),
+    group:indexOf('所屬題組'),
+    score:indexOf('建議配分')
+  };
+  if(Object.values(idx).some(i=>i<0)) return [];
+  return lines.slice(2).map(line=>{
+    const cells=splitMarkdownTableRow(line);
+    return {
+      question:(cells[idx.question]||'').trim(),
+      type:(cells[idx.type]||'').trim(),
+      group:(cells[idx.group]||'').trim(),
+      scoreText:(cells[idx.score]||'').trim(),
+      score:parseScoreValue(cells[idx.score])
+    };
+  }).filter(row=>row.question||row.type||row.group||row.scoreText);
+}
+
+function parseScoreValue(value){
+  const normalized=String(value||'')
+    .replace(/[０-９]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0xFEE0))
+    .replace(/[，,]/g,'')
+    .trim();
+  const match=normalized.match(/-?\d+(?:\.\d+)?/);
+  return match?Number(match[0]):NaN;
+}
+
+function formatScoreValue(value){
+  if(Number.isNaN(value)) return '無法解析';
+  return Number.isInteger(value)?String(value):String(Number(value.toFixed(2)));
+}
+
+function buildItemGroupValidationResult(rows){
+  const groups=new Map();
+  const children=new Map();
+  rows.forEach(row=>{
+    if(row.type==='題組'&&row.question) groups.set(row.question,row);
+    if(row.type==='子題'){
+      const groupId=row.group||'未填所屬題組';
+      if(!children.has(groupId)) children.set(groupId,[]);
+      children.get(groupId).push(row);
+    }
+  });
+  if(groups.size===0&&children.size===0) return '未發現題組題，無需進行題組配分驗算。';
+
+  const resultRows=[];
+  groups.forEach((group,groupId)=>{
+    const groupChildren=children.get(groupId)||[];
+    const total=group.score;
+    let childSum=0;
+    let hasInvalidChildScore=false;
+    groupChildren.forEach(child=>{
+      if(Number.isNaN(child.score)) hasInvalidChildScore=true;
+      else childSum+=child.score;
+    });
+    const diff=Number.isNaN(total)?NaN:childSum-total;
+    let status='通過';
+    let note='題組總分與子題加總一致';
+    if(Number.isNaN(total)){
+      status='警示';
+      note='題組總分無法解析';
+    }else if(groupChildren.length===0){
+      status='警示';
+      note='題組未找到子題';
+    }else if(hasInvalidChildScore){
+      status='警示';
+      note='部分子題配分無法解析';
+    }else if(diff!==0){
+      status='警示';
+      note='子題加總與題組總分不一致';
+    }
+    resultRows.push({group:groupId,total,childSum,diff,status,note});
+  });
+  children.forEach((groupChildren,groupId)=>{
+    if(groups.has(groupId)) return;
+    groupChildren.forEach(child=>{
+      if(Number.isNaN(child.score)) return;
+      resultRows.push({
+        group:groupId||child.question||'未填所屬題組',
+        total:NaN,
+        childSum:child.score,
+        diff:NaN,
+        status:'警示',
+        note:`子題 ${child.question||'未命名'} 有分數但找不到題組列`
+      });
+    });
+  });
+  if(resultRows.length===0) return '未發現題組題，無需進行題組配分驗算。';
+  const tableRows=resultRows.map(row=>`| ${row.group} | ${formatScoreValue(row.total)} | ${formatScoreValue(row.childSum)} | ${formatScoreValue(row.diff)} | ${row.status} | ${row.note} |`);
+  return ['# 題組配分驗算結果','','| 題組 | 題組總分 | 子題加總 | 差距 | 狀態 | 說明 |','|---|---:|---:|---:|---|---|',...tableRows].join('\n');
+}
+
+function validateItemGroupScores(){
+  const text=getOrganizerInput();
+  if(!text){ renderOrganizerResult(''); setOrganizerStatus('請先貼上 AI 回覆。','warn'); return; }
+  const section=extractH1Section(text,'精簡題庫摘要表');
+  if(!section){
+    const msg='找不到「# 精簡題庫摘要表」區塊，無法進行題組配分驗算。';
+    renderOrganizerResult(msg);
+    setOrganizerStatus(msg,'warn');
+    return;
+  }
+  const rows=parseMarkdownTable(section);
+  if(!rows.length){
+    const msg='無法解析「# 精簡題庫摘要表」的 Markdown 表格，請確認欄位包含題號、類型、所屬題組、建議配分。';
+    renderOrganizerResult(msg);
+    setOrganizerStatus(msg,'warn');
+    return;
+  }
+  const result=buildItemGroupValidationResult(rows);
+  renderOrganizerResult(result);
+  setOrganizerStatus(result.includes('警示')?'題組配分驗算完成，發現警示。':'題組配分驗算完成。',result.includes('警示')?'warn':'ok');
 }
 
 function organizeBankSummary(){
