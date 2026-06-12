@@ -717,7 +717,7 @@ textarea { resize: vertical; min-height: 130px; line-height: 1.7; }
     <div class="step-guide">
       <div class="guide-label">目前要做</div>
       <div class="guide-title" id="s1GuideTitle">先選科目與年級，再提供教材</div>
-      <div class="guide-text" id="s1GuideText">教材是主要出題依據；範圍與難度可以先不改。若還不想直接排成考卷，建議先選「產出題庫」。</div>
+      <div class="guide-text" id="s1GuideText">教材是主要依據；範圍與難度可以先不改。若還不想直接排成考卷，建議先選「題庫 Prompt」。</div>
       <div class="guide-checks">
         <span class="guide-chip warn" id="guideSubjectChip">1. 選科目</span>
         <span class="guide-chip warn" id="guideGradeChip">2. 選年級</span>
@@ -938,7 +938,7 @@ textarea { resize: vertical; min-height: 130px; line-height: 1.7; }
       </button>
       <button class="btn btn-p" id="btn-s2ch-next" onclick="toStep5Ch()" disabled>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-        <span id="btnS2chNextLabel">開始出題</span>
+        <span id="btnS2chNextLabel">產生命題 Prompt</span>
       </button>
     </div>
   </div>
@@ -1020,7 +1020,7 @@ textarea { resize: vertical; min-height: 130px; line-height: 1.7; }
     <div class="step-guide">
       <div class="guide-label">目前要做</div>
       <div class="guide-title" id="s4GuideTitle">把題數與每題分數調整到總分 100 分</div>
-      <div class="guide-text" id="s4GuideText">表格下方會即時顯示差距；合計剛好 100 分後，才會開放開始出題。</div>
+      <div class="guide-text" id="s4GuideText">表格下方會即時顯示差距；合計剛好 100 分後，才會開放產生命題 Prompt。</div>
     </div>
     <p class="pnl-desc" id="s4Desc">調整每大題的題數與每題分數，可用箭頭調整出題順序。總分需為 100 分。</p>
     <table class="stbl">
@@ -1028,7 +1028,7 @@ textarea { resize: vertical; min-height: 130px; line-height: 1.7; }
       <tbody id="scBody"></tbody>
     </table>
     <div class="stbl-total" id="scTotal">合計：100 分</div>
-    <div class="next-note" id="s4NextHint" aria-live="polite">合計 100 分後即可開始出題。</div>
+    <div class="next-note" id="s4NextHint" aria-live="polite">合計 100 分後即可產生命題 Prompt。</div>
     <div class="brow">
       <button class="btn btn-s" onclick="goStep(3)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m7-7-7 7 7 7"/></svg>
@@ -1036,7 +1036,7 @@ textarea { resize: vertical; min-height: 130px; line-height: 1.7; }
       </button>
       <button class="btn btn-p" id="btnGen" onclick="generate()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-        <span id="btnGenLabel">開始出題</span>
+        <span id="btnGenLabel">產生命題 Prompt</span>
       </button>
     </div>
   </div>
@@ -1046,8 +1046,8 @@ textarea { resize: vertical; min-height: 130px; line-height: 1.7; }
     <div id="s5-ld" class="pnl">
       <div class="ld-wrap">
         <div class="ld-spin"></div>
-        <div class="ld-msg" id="s5-ldMsg">AI 正在根據教材與學習目標命題中...</div>
-        <div class="ld-sub" id="s5-ldSub">通常需要 30-60 秒，依題數而定</div>
+        <div class="ld-msg" id="s5-ldMsg">正在整理命題 Prompt...</div>
+        <div class="ld-sub" id="s5-ldSub">通常幾秒內完成</div>
         <!-- [修改4] 計時器 -->
         <div class="ld-timer" id="s5-timer"></div>
       </div>
@@ -1476,8 +1476,8 @@ function isCompetencyAssessmentMode(){
 }
 
 function getOutputModeLabel(){
-  if(isCompetencyAssessmentMode()) return '學力檢測（能力導向）模式';
-  return isBankMode() ? '產出題庫' : '正式考卷';
+  if(isCompetencyAssessmentMode()) return '能力導向 Prompt';
+  return isBankMode() ? '題庫 Prompt' : '正式考卷 Prompt';
 }
 
 function setOutputMode(mode){
@@ -1578,7 +1578,7 @@ function updateChineseModeUI(bank){
     ? '這裡設定題庫覆蓋比重，不是正式試卷配分；老師後續可從題庫挑題組卷。'
     : '依據試題審核表設定本次考試各向度的配分。系統已根據年級帶入建議比例，您可依需求調整。';
   if(totalLabel) totalLabel.textContent = bank ? '所有向度比重合計需等於 100' : '所有向度配分合計需等於 100 分';
-  if(nextLabel) nextLabel.textContent = bank ? '產出題庫' : '開始出題';
+  if(nextLabel) nextLabel.textContent = isPublicPromptOnlyMode() ? '產生命題 Prompt' : (bank ? '產出題庫' : '開始出題');
 }
 
 function updateStep1Guide() {
@@ -1880,7 +1880,7 @@ function updChTotal() {
   const btn = document.getElementById('btn-s2ch-next');
   if (btn) btn.disabled = total!==100;
   const diff = Math.abs(100-total);
-  const okText = isBankMode() ? '比重已達 100，可以產出題庫。' : '配分已達 100 分，可以開始出題。';
+  const okText = isBankMode() ? '比重已達 100，可以產生題庫 Prompt。' : '配分已達 100 分，可以產生命題 Prompt。';
   const waitText = isBankMode()
     ? `目前 ${total}，還${total>100?'超出':'差'} ${diff}。`
     : `目前 ${total} 分，還${total>100?'超出':'差'} ${diff} 分。`;
@@ -2171,7 +2171,7 @@ function updSc(){
   if(total===100){el.textContent='合計：100 分 ✓';el.classList.remove('err');}
   else{el.textContent=`合計：${total} 分（${total>100?'超出':'不足'} ${Math.abs(total-100)} 分）`;el.classList.add('err');}
   document.getElementById('btnGen').disabled=total!==100;
-  setNextNote('s4NextHint', total===100 ? '配分已完成，按「開始出題」即可產生考卷。' : `請再調整配分：目前${total>100?'超出':'不足'} ${Math.abs(total-100)} 分。`, total===100);
+  setNextNote('s4NextHint', total===100 ? '配分已完成，按「產生命題 Prompt」即可產生可複製 Prompt。' : `請再調整配分：目前${total>100?'超出':'不足'} ${Math.abs(total-100)} 分。`, total===100);
 }
 
 // ═══════════════════════════════════════
