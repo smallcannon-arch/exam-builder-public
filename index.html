@@ -673,8 +673,28 @@ textarea { resize: vertical; min-height: 130px; line-height: 1.7; }
       個人維護｜Prompt-only 公開版｜持續優化中
     </div>
     <h1>輔助命題系統</h1>
-    <p class="hdr-sub">上傳教材 → AI 分析學習目標 → 智慧出題 → 老師審題把關</p>
+    <p class="hdr-sub">教師命題 Prompt 產生與 AI 回覆整理輔助工具</p>
   </header>
+
+  <section class="pnl">
+    <div class="pnl-t">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg>
+      使用方式
+    </div>
+    <p class="pnl-desc">本工具是個人維護的教師命題輔助工具，協助老師將教材轉成可複製到 ChatGPT、Gemini 或 Claude 的命題 Prompt。本公開版採 Prompt-only 模式，不直接呼叫 AI 後端，也不會自動連線產生試題。</p>
+    <div class="result-guide">
+      <div class="result-step"><strong>1. 輸入教材</strong>輸入教材或上傳可讀檔案。</div>
+      <div class="result-step"><strong>2. 選擇設定</strong>選擇年級、科目與命題模式。</div>
+      <div class="result-step"><strong>3. 產生 Prompt</strong>點選「產生命題 Prompt」。</div>
+      <div class="result-step"><strong>4. 貼到外部 AI</strong>複製 Prompt 到 ChatGPT、Gemini 或 Claude。</div>
+      <div class="result-step"><strong>5. 教師審查</strong>將 AI 回覆中的題庫、答案解析與審核表草稿交由教師審查、修正後使用。</div>
+    </div>
+    <div class="step-guide">
+      <div class="guide-label">題庫與審核表流程</div>
+      <div class="guide-text">題庫模式會產生兩段式命題 Prompt：第一段協助產生評量藍圖與題庫；第二段可依老師選用題號，協助產生組卷配分對帳與試題審核表草稿。系統可在本機整理 AI 回覆中的固定區塊，但審核表仍為草稿，需由教師依校內格式修正後使用。</div>
+    </div>
+    <div class="ai-org-safe">請勿輸入學生個資、未公開校務資料或敏感案件內容。AI 產出內容須由教師審查、修正後使用。本工具不代表學校官方題庫，也不代表正式學力檢測標準。</div>
+  </section>
 
   <div class="steps">
     <div class="stp on" data-s="1"><span class="stp-n">1</span><span class="stp-t">教材</span></div>
@@ -685,7 +705,7 @@ textarea { resize: vertical; min-height: 130px; line-height: 1.7; }
     <div class="stp-c"></div>
     <div class="stp" data-s="4"><span class="stp-n">4</span><span class="stp-t">配分</span></div>
     <div class="stp-c"></div>
-    <div class="stp" data-s="5"><span class="stp-n">5</span><span class="stp-t">出題</span></div>
+    <div class="stp" data-s="5"><span class="stp-n">5</span><span class="stp-t">Prompt</span></div>
   </div>
 
   <!-- ═══ STEP 1 ═══ -->
@@ -701,7 +721,7 @@ textarea { resize: vertical; min-height: 130px; line-height: 1.7; }
       <div class="guide-checks">
         <span class="guide-chip warn" id="guideSubjectChip">1. 選科目</span>
         <span class="guide-chip warn" id="guideGradeChip">2. 選年級</span>
-        <span class="guide-chip done" id="guideModeChip">3. 正式考卷</span>
+        <span class="guide-chip done" id="guideModeChip">3. Prompt 模式</span>
         <span class="guide-chip done" id="guideOptionChip">4. 選填設定可不改</span>
         <span class="guide-chip warn" id="guideMaterialChip">5. 教材內容</span>
         <span class="guide-chip warn" id="guideNextChip">6. 下一步</span>
@@ -731,16 +751,16 @@ textarea { resize: vertical; min-height: 130px; line-height: 1.7; }
         <label class="fl">這次要產出什麼？</label>
         <div class="mode-seg">
           <button type="button" class="mode-option on" id="modeExam" onclick="setOutputMode('exam')">
-            <strong>正式考卷</strong>
-            <span>直接產生可排版列印的試卷、答案卷與審核表。</span>
+            <strong>正式考卷 Prompt</strong>
+            <span>產生可貼到外部 AI 的試卷、答案與審核表草稿 Prompt；不是本頁自動出題。</span>
           </button>
           <button type="button" class="mode-option" id="modeBank" onclick="setOutputMode('bank')">
-            <strong>產出題庫</strong>
-            <span>先產生可挑選題目，老師挑題後再自行組卷。</span>
+            <strong>題庫 Prompt</strong>
+            <span>產生可挑選題庫 Prompt，老師取得 AI 回覆後再挑題、組卷與審查。</span>
           </button>
           <button type="button" class="mode-option" id="modeCompetency" onclick="setOutputMode('competency_assessment')">
-            <strong>學力檢測（能力導向）模式</strong>
-            <span>參考學力檢測常見題型精神，產生閱讀理解、情境應用、資料判讀、圖表推論與多步驟思考題。AI 產出內容仍須由教師審查、修正後使用。</span>
+            <strong>能力導向 Prompt</strong>
+            <span>參考學力檢測常見題型精神，產生能力導向命題 Prompt；AI 回覆仍須由教師審查、修正後使用。</span>
           </button>
         </div>
       </div>
@@ -1497,13 +1517,14 @@ function updateModeUI(){
   const s4Desc = document.getElementById('s4Desc');
   const s4TitleText = document.getElementById('s4TitleText');
   const s3NextLabel = document.getElementById('s3NextLabel');
-  if(s4TitleText) s4TitleText.textContent = bank ? '題庫數量設定' : '配分設定';
+  if(s4TitleText) s4TitleText.textContent = bank ? '題庫 Prompt 題數設定' : '試卷 Prompt 配分設定';
   if(s3NextLabel) s3NextLabel.textContent = bank ? '下一步：設定題庫題數' : '下一步：配分';
-  if(s4Title) s4Title.textContent = bank ? '設定每種題型要產生幾題' : '把題數與每題分數調整到總分 100 分';
-  if(s4Text) s4Text.textContent = bank ? '這裡只決定題庫份量，不做正式配分；老師後續可從題庫挑題組卷。' : '表格下方會即時顯示差距；合計剛好 100 分後，才會開放開始出題。';
-  if(s4Desc) s4Desc.textContent = bank ? '調整每個題型要產生的題數，可用箭頭調整題型順序。' : '調整每大題的題數與每題分數，可用箭頭調整出題順序。總分需為 100 分。';
+  if(s4Title) s4Title.textContent = bank ? '設定 Prompt 中各題型要請外部 AI 產生幾題' : '設定 Prompt 中各大題題數與配分';
+  if(s4Text) s4Text.textContent = bank ? '這裡只決定題庫 Prompt 的題庫份量，不做正式配分；老師取得 AI 回覆後再挑題組卷。' : '表格下方會即時顯示差距；合計剛好 100 分後，才會開放產生命題 Prompt。';
+  if(s4Desc) s4Desc.textContent = bank ? '調整每個題型要寫入 Prompt 的題數，可用箭頭調整題型順序。' : '調整每大題的題數與每題分數，系統會整理成可複製到外部 AI 的命題 Prompt。';
 
   const promptOnly = isPublicPromptOnlyMode();
+  if(s5Tab) s5Tab.textContent = promptOnly ? 'Prompt' : (bank ? '題庫' : '出題');
   const genLabel = document.getElementById('btnGenLabel');
   if(genLabel) genLabel.textContent = promptOnly ? '產生命題 Prompt' : (competency ? '產出能力導向題庫' : (bank ? '產出題庫' : '開始出題'));
   const resultTitle = document.getElementById('resultTitle');
@@ -1527,7 +1548,7 @@ function updateModeUI(){
     resultGuide.innerHTML = promptOnly ? `
       <div class="result-step"><strong>1. 複製 Prompt</strong>Prompt-only 公開版不直接呼叫 AI 後端；請將 Prompt 貼到 ChatGPT、Gemini 或 Claude 使用。</div>
       <div class="result-step"><strong>2. 教師審查</strong>AI 產出內容須由教師審查、修正後使用，不代表任職學校或任何官方單位題庫，也不代表正式學力檢測標準。</div>
-      <div class="result-step"><strong>3. 自行整理</strong>AI 回傳後再由教師自行挑題、修題、整理答案與學習目標。</div>
+      <div class="result-step"><strong>3. 整理回覆</strong>可將 AI 回覆貼到「AI 回覆整理」區擷取固定區塊；題目、答案與審核表草稿仍需教師修正。</div>
     ` : (bank ? `
       <div class="result-step"><strong>1. 先挑題</strong>從題庫中挑出適合班級程度與教材內容的題目。</div>
       <div class="result-step"><strong>2. 再組卷</strong>複製題庫或答案索引，貼到文件後自行排版成正式考卷。</div>
@@ -3353,7 +3374,7 @@ function getExamTextForImagePrompt(){
 async function generateImagePrompts(e){
   if(!S.output){ alert('尚未產生考卷'); return; }
   if(isPublicPromptOnlyMode()){
-    alert('Prompt-only 公開版暫不提供一鍵圖片提示詞生成。請複製命題 Prompt 或 AI 回傳結果後，自行在 AI 工具中整理圖片提示詞。');
+    alert('Prompt-only 公開版暫不提供圖片提示詞生成。請複製命題 Prompt 或 AI 回傳結果後，自行在 AI 工具中整理圖片提示詞。');
     return;
   }
   if(!window.PROMPT_HELPERS||typeof window.PROMPT_HELPERS.buildChatGPTImagePromptRequest!=='function'){
@@ -3448,7 +3469,7 @@ function copyObj(e){
 }
 function copyImg(e){
   if(isPublicPromptOnlyMode()){
-    alert('Prompt-only 公開版暫不提供一鍵圖片提示詞生成。');
+    alert('Prompt-only 公開版暫不提供圖片提示詞生成。');
     return;
   }
   const m1=S.output.search(/═{3,}\s*(?:ChatGPT\s*)?(?:圖片生成|出圖)指令/),m2=S.output.search(/═{3,}\s*國語科雙向細目表對應\s*═{3,}/);
